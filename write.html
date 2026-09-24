@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loom・作者端</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<script>
+// ══════════════════════════════════════════════
+//  設定區：只改這一行，貼上 Apps Script 的 /exec 網址
+// ══════════════════════════════════════════════
+var API_URL = 'https://script.google.com/macros/s/AKfycbwWw3njCkyrj4P1I2SdnY3Vcy9p9eeoTGaQYGoW_eZ_fmFoBg--qAo2s5DRmtdGiugx9g/exec';
+// ══════════════════════════════════════════════
+</script>
+<style>
+:root{
+  --paper:#f4efe6; --panel:#faf7f1; --ink:#2a2622; --muted:#7a716a; --faint:#9a8f84;
+  --line:#ddd3c4; --line2:#c9bda9; --accent:#a8612a; --accent-soft:#f1e8da;
+  --ok:#3f8a4d; --warn:#d08a2a; --bad:#b03a2e;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:"Noto Sans TC",system-ui,sans-serif;background:var(--paper);color:var(--ink);font-size:14px}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:13px;color:var(--ink)}
+a{color:var(--accent)}
+
+/* 口令 */
+#gate{position:fixed;inset:0;background:var(--paper);display:flex;align-items:center;justify-content:center;z-index:50}
+#gate .box{width:320px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:28px;display:flex;flex-direction:column;gap:12px}
+#gate h1{margin:0;font-family:"Noto Serif TC",serif;font-size:24px;letter-spacing:2px}
+#gate input{padding:10px;border:1px solid var(--line2);border-radius:6px;font-size:14px}
+#gate button{padding:10px;border:none;border-radius:6px;background:var(--ink);color:#fff;font-size:14px}
+#gate .err{color:var(--bad);font-size:12px;min-height:16px}
+
+/* 版面 */
+#app{display:none;height:100%;flex-direction:column}
+#app.on{display:flex}
+header{height:56px;flex:none;padding:0 20px;display:flex;align-items:center;gap:16px;border-bottom:1px solid var(--line);background:var(--panel)}
+header .logo{font-family:"Noto Serif TC",serif;font-weight:700;font-size:20px;letter-spacing:2px}
+header .book{font-size:13px;color:var(--muted)}
+header .sp{flex:1}
+header .stat{font-size:13px;color:var(--muted)}
+header .saved{font-size:13px;display:flex;align-items:center;gap:6px;color:var(--muted)}
+header .saved .dot{width:8px;height:8px;border-radius:50%;background:var(--faint)}
+header .saved.ok{color:var(--ok)} header .saved.ok .dot{background:var(--ok)}
+header .saved.dirty{color:var(--warn)} header .saved.dirty .dot{background:var(--warn)}
+header .saved.bad{color:var(--bad)} header .saved.bad .dot{background:var(--bad)}
+header .btn{font-size:13px;padding:6px 14px;border:1px solid var(--line2);border-radius:6px;background:#fff;color:var(--ink);text-decoration:none}
+header .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+
+main{flex:1;display:flex;min-height:0}
+
+/* 左欄 */
+#left{width:280px;flex:none;border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;overflow:hidden}
+#left .tabs{padding:14px 14px 8px;display:flex;gap:6px}
+#left .tabs button{flex:1;font-size:12px;padding:6px 0;border:1px solid var(--line2);border-radius:6px;background:#fff;color:var(--ink)}
+#left .tabs button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+#list{flex:1;overflow-y:auto;padding-bottom:8px}
+.item{padding:10px 14px;border-left:3px solid transparent;cursor:pointer;display:flex;flex-direction:column;gap:3px}
+.item:hover{background:#f3ede2}
+.item.on{border-left-color:var(--accent);background:var(--accent-soft)}
+.item .t{font-size:14px;font-weight:500;display:flex;gap:8px;align-items:baseline}
+.item .t .n{color:var(--faint);font-size:12px;min-width:20px}
+.item .m{font-size:11px;color:var(--muted);display:flex;gap:10px}
+.item .m .s{font-weight:500}
+.s-構思{color:var(--faint)} .s-草稿{color:var(--accent)} .s-修改{color:var(--warn)} .s-完成{color:var(--ok)}
+.item.dim .t{color:var(--faint)}
+#left .add{margin:8px 14px 0}
+#left .add button{width:100%;font-size:13px;padding:8px 0;border:1px dashed var(--line2);border-radius:6px;background:transparent;color:var(--muted)}
+#cal{border-top:1px solid var(--line);padding:12px 14px 14px}
+#cal .h{font-size:11px;color:var(--faint);letter-spacing:1px;margin-bottom:8px;display:flex;justify-content:space-between}
+#cal .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+#cal .d{height:16px;border-radius:3px;background:#e6dccb}
+#cal .d.l1{background:#d9b58e} #cal .d.l2{background:#c48a55} #cal .d.l3{background:var(--accent)}
+#cal .d.today{outline:2px solid var(--ink);outline-offset:1px}
+#cal .d.off{background:transparent}
+#cal .f{font-size:11px;color:var(--muted);margin-top:8px}
+
+/* 中欄 */
+#center{flex:1;display:flex;justify-content:center;overflow-y:auto}
+#center .page{width:min(680px,100%);padding:40px 20px 120px;display:flex;flex-direction:column;gap:18px}
+.empty{color:var(--faint);text-align:center;padding-top:120px;font-size:15px;line-height:2}
+
+.banner{padding:10px 14px;border-radius:8px;font-size:13px;display:flex;align-items:center;gap:12px}
+.banner.warn{background:#fbf0dc;border:1px solid #ecd2a3;color:#7a4e0c}
+.banner.info{background:#e6eef7;border:1px solid #c3d3e6;color:#2c4a6e}
+.banner .sp{flex:1}
+.banner button{font-size:12px;padding:4px 10px;border:1px solid currentColor;border-radius:5px;background:transparent;color:inherit}
+
+.head{display:flex;align-items:baseline;gap:14px}
+.head .no{font-family:"Noto Serif TC",serif;font-size:13px;color:var(--accent);letter-spacing:3px;white-space:nowrap}
+.head input.title{flex:1;font-family:"Noto Serif TC",serif;font-size:28px;font-weight:600;border:none;background:transparent;padding:0;outline:none;min-width:0}
+.head input.title::placeholder{color:var(--line2)}
+
+.meta{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:12px;color:var(--muted)}
+.meta label{display:flex;align-items:center;gap:6px}
+.meta input,.meta select{padding:4px 8px;border:1px solid var(--line);border-radius:5px;background:#fff;font-size:12px}
+.meta input{width:110px}
+.meta .toggle{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+.meta .toggle input{width:auto}
+.meta details{font-size:12px}
+.meta details summary{cursor:pointer;color:var(--accent)}
+.meta textarea{width:100%;margin-top:6px;padding:8px;border:1px solid var(--line);border-radius:6px;background:#fff;font-size:13px;line-height:1.6;resize:vertical;min-height:60px}
+
+#editor{font-family:"Noto Serif TC",serif;font-size:17px;line-height:1.9;color:var(--ink);outline:none;min-height:400px;white-space:pre-wrap;word-break:break-word}
+#editor div,#editor p{margin:0;text-indent:2em;min-height:1.9em}
+#editor:empty::before{content:"從這裡開始寫。Enter 換段，＊＊＊ 分場。";color:var(--line2);text-indent:2em;display:block}
+#editor:focus:empty::before{content:""}
+
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.actions button{font-size:13px;padding:8px 16px;border:1px solid var(--line2);border-radius:6px;background:#fff;color:var(--ink)}
+.actions button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.actions button.danger{color:var(--bad);border-color:#e3c0bb}
+.actions .sp{flex:1}
+.actions a{font-size:13px}
+
+/* 表單（角色／世界／伏筆） */
+.form{display:flex;flex-direction:column;gap:12px}
+.form h2{margin:0;font-family:"Noto Serif TC",serif;font-size:22px}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.form input,.form select,.form textarea{padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;font-size:14px}
+.form textarea{min-height:120px;line-height:1.7;resize:vertical}
+.form .row{display:flex;gap:12px}
+.form .row label{flex:1}
+
+/* 右欄 */
+#right{width:300px;flex:none;border-left:1px solid var(--line);background:var(--panel);padding:16px;display:flex;flex-direction:column;gap:12px;overflow-y:auto}
+#right .h{font-size:11px;color:var(--faint);letter-spacing:1px}
+.card{padding:12px;border:1px solid var(--line);border-radius:8px;background:#fff;display:flex;flex-direction:column;gap:6px;cursor:pointer}
+.card:hover{border-color:var(--line2)}
+.card .n{display:flex;align-items:center;gap:8px}
+.card .av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;background:#d9b58e;flex:none}
+.card .nm{font-size:14px;font-weight:500}
+.card .c{font-size:11px;color:var(--faint);margin-left:auto}
+.card .d{font-size:12px;line-height:1.6;color:#55504a;white-space:pre-wrap}
+.thread{font-size:12px;color:#55504a;display:flex;gap:8px;line-height:1.5;cursor:pointer}
+.thread .k{color:var(--warn)}
+#right .none{font-size:12px;color:var(--faint)}
+#right .sp{flex:1}
+#note{width:100%;height:84px;padding:10px;border:1px solid var(--line2);border-radius:8px;background:#fff;font-size:13px;line-height:1.6;resize:none}
+#noteBtn{font-size:13px;padding:8px 0;border:none;border-radius:6px;background:var(--accent);color:#fff}
+.logline{font-size:11px;color:var(--muted);line-height:1.5;padding-left:8px;border-left:2px solid var(--line)}
+
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:60}
+#toast.on{opacity:1}
+
+@media (max-width:1100px){ #right{display:none} }
+@media (max-width:800px){ #left{width:220px} }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="box">
+    <h1>Loom</h1>
+    <div style="font-size:13px;color:var(--muted)">作者端。輸入口令後會記在這台瀏覽器。</div>
+    <input id="passIn" type="password" placeholder="口令" autocomplete="current-password">
+    <button id="passBtn">進入</button>
+    <div class="err" id="passErr"></div>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <div class="logo">Loom</div>
+    <div class="book" id="bookName"></div>
+    <div class="sp"></div>
+    <div class="stat" id="statToday">今日 +0 字</div>
+    <div class="stat" id="statStreak">連續 0 天</div>
+    <div class="saved" id="savedState"><span class="dot"></span><span id="savedText">尚未載入</span></div>
+    <a class="btn" id="readerLink" href="index.html" target="_blank">讀者端</a>
+    <button class="btn" id="reloadBtn">重新載入</button>
+  </header>
+
+  <main>
+    <aside id="left">
+      <div class="tabs">
+        <button data-tab="chapters" class="on">章節</button>
+        <button data-tab="characters">角色</button>
+        <button data-tab="world">世界</button>
+        <button data-tab="threads">伏筆</button>
+      </div>
+      <div id="list"></div>
+      <div class="add"><button id="addBtn">＋ 新增章節</button></div>
+      <div id="cal">
+        <div class="h"><span id="calTitle">寫作日曆</span><span id="calTotal"></span></div>
+        <div class="grid" id="calGrid"></div>
+        <div class="f" id="calFoot"></div>
+      </div>
+    </aside>
+
+    <section id="center"><div class="page" id="page"><div class="empty">左邊選一章，或新增一章。</div></div></section>
+
+    <aside id="right">
+      <div class="h">本章提到的角色</div>
+      <div id="rChars"><div class="none">開啟章節後顯示</div></div>
+      <div class="h" style="margin-top:4px">未收的伏筆</div>
+      <div id="rThreads"><div class="none">—</div></div>
+      <div class="h" style="margin-top:4px">最近日誌</div>
+      <div id="rLog" style="display:flex;flex-direction:column;gap:6px"></div>
+      <div class="sp"></div>
+      <div class="h">隨筆・寫給明天的自己</div>
+      <textarea id="note" placeholder="今天卡在哪、下次從哪接……"></textarea>
+      <button id="noteBtn">記下來</button>
+    </aside>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+
+// ───────── 狀態 ─────────
+var S = {
+  pass: '', book: '', author: '',
+  chapters: [], characters: [], world: [], threads: [], log: [],
+  tab: 'chapters',
+  cur: null,          // 目前開啟的章節（含 body）
+  curKind: 'chapter', // chapter | character | world | thread
+  dirty: false,
+  saving: false,
+  savedWords: 0,      // 上次存檔時的字數（算今日新增用）
+  autosaveTimer: null
+};
+var $ = function(id){ return document.getElementById(id); };
+var STATUSES = ['構思','草稿','修改','完成'];
+
+// ───────── 工具 ─────────
+function toast(msg, ms){ var t=$('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(t._t); t._t=setTimeout(function(){t.classList.remove('on');}, ms||1800); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function countWords(text){
+  if(!text) return 0;
+  var s=String(text).replace(/\s+/g,'');
+  var cjk=(s.match(/[一-鿿㐀-䶿]/g)||[]).length;
+  var latin=(String(text).match(/[A-Za-z0-9]+/g)||[]).length;
+  return cjk+latin;
+}
+function pad2(n){ n=String(n); return n.length<2?'0'+n:n; }
+function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+function fmtTime(iso){ if(!iso) return ''; var d=new Date(iso); return pad2(d.getHours())+':'+pad2(d.getMinutes()); }
+function fmtDate(iso){ if(!iso) return ''; var d=new Date(iso); return (d.getMonth()+1)+'/'+d.getDate(); }
+function setSaved(state, text){ var el=$('savedState'); el.className='saved '+state; $('savedText').textContent=text; }
+
+// ───────── API ─────────
+function apiGet(params){
+  var q=Object.keys(params).map(function(k){return k+'='+encodeURIComponent(params[k]);}).join('&');
+  return fetch(API_URL+'?'+q).then(function(r){return r.json();}).then(function(j){ if(!j.ok) throw new Error(j.error||'讀取失敗'); return j; });
+}
+function apiPost(action, data){
+  return fetch(API_URL,{method:'POST',body:JSON.stringify({pass:S.pass,action:action,data:data||{}})})
+    .then(function(r){return r.json();}).then(function(j){ if(!j.ok) throw new Error(j.error||'寫入失敗'); return j.result; });
+}
+
+// ───────── 口令 ─────────
+function tryPass(p){
+  $('passErr').textContent='';
+  apiGet({action:'all',pass:p}).then(function(j){
+    S.pass=p; try{ localStorage.setItem('loom_pass',p); }catch(_){}
+    $('gate').style.display='none'; $('app').classList.add('on');
+    applyAll(j);
+  }).catch(function(e){ $('passErr').textContent=e.message; });
+}
+$('passBtn').onclick=function(){ tryPass($('passIn').value.trim()); };
+$('passIn').onkeydown=function(e){ if(e.key==='Enter') tryPass($('passIn').value.trim()); };
+
+// ───────── 載入 ─────────
+function applyAll(j){
+  S.book=j.book; S.author=j.author;
+  S.chapters=(j.chapters||[]).sort(function(a,b){return Number(a.order)-Number(b.order);});
+  S.characters=j.characters||[]; S.world=j.world||[]; S.threads=j.threads||[]; S.log=j.log||[];
+  $('bookName').textContent='《'+S.book+'》・'+S.author;
+  document.title='Loom・'+S.book;
+  renderList(); renderCal(); renderStats(); renderRight();
+  setSaved('', '已載入');
+}
+function reloadAll(){
+  if(S.dirty && !confirm('有未存的內容，重新載入會丟掉。確定？')) return;
+  apiGet({action:'all',pass:S.pass}).then(function(j){ applyAll(j); if(S.cur&&S.curKind==='chapter'){ var id=S.cur.id; S.cur=null; openChapter(id);} toast('已重新載入'); }).catch(function(e){ toast('載入失敗：'+e.message,3000); });
+}
+$('reloadBtn').onclick=reloadAll;
+
+// ───────── 左欄 ─────────
+Array.prototype.forEach.call(document.querySelectorAll('#left .tabs button'),function(b){
+  b.onclick=function(){ S.tab=b.getAttribute('data-tab'); Array.prototype.forEach.call(document.querySelectorAll('#left .tabs button'),function(x){x.classList.toggle('on',x===b);}); renderList(); };
+});
+function renderList(){
+  var el=$('list'), html='';
+  var addBtn=$('addBtn');
+  if(S.tab==='chapters'){
+    addBtn.textContent='＋ 新增章節';
+    S.chapters.forEach(function(c){
+      var on=S.curKind==='chapter'&&S.cur&&S.cur.id===c.id;
+      var days=c.updated_at?Math.floor((Date.now()-new Date(c.updated_at))/86400000):null;
+      var when=days===null?'':(days===0?'今天':days+' 天前');
+      html+='<div class="item '+(on?'on':'')+' '+(c.status==='構思'?'dim':'')+'" data-id="'+esc(c.id)+'">'+
+        '<div class="t"><span class="n">'+pad2(c.order)+'</span><span>'+esc(c.title||'未命名')+'</span></div>'+
+        '<div class="m"><span class="s s-'+esc(c.status)+'">● '+esc(c.status)+'</span><span>'+(c.word_count||0)+' 字</span><span>'+(c.public?'公開':'未公開')+'</span><span>'+when+'</span></div></div>';
+    });
+    if(!S.chapters.length) html='<div class="empty" style="padding-top:40px;font-size:13px">還沒有章節</div>';
+  } else if(S.tab==='characters'){
+    addBtn.textContent='＋ 新增角色';
+    S.characters.forEach(function(c){
+      var on=S.curKind==='character'&&S.cur&&S.cur.id===c.id;
+      html+='<div class="item '+(on?'on':'')+'" data-id="'+esc(c.id)+'"><div class="t"><span>'+esc(c.name)+'</span></div><div class="m"><span>'+esc(c.role||'')+'</span></div></div>';
+    });
+    if(!S.characters.length) html='<div class="empty" style="padding-top:40px;font-size:13px">還沒有角色</div>';
+  } else if(S.tab==='world'){
+    addBtn.textContent='＋ 新增設定';
+    S.world.forEach(function(w){
+      var on=S.curKind==='world'&&S.cur&&S.cur.id===w.id;
+      html+='<div class="item '+(on?'on':'')+'" data-id="'+esc(w.id)+'"><div class="t"><span>'+esc(w.name)+'</span></div><div class="m"><span>'+esc(w.category||'')+'</span></div></div>';
+    });
+    if(!S.world.length) html='<div class="empty" style="padding-top:40px;font-size:13px">還沒有世界觀設定</div>';
+  } else {
+    addBtn.textContent='＋ 新增伏筆';
+    S.threads.forEach(function(t){
+      var on=S.curKind==='thread'&&S.cur&&S.cur.id===t.id;
+      var ch=chapterById(t.chapter_id);
+      html+='<div class="item '+(on?'on':'')+' '+(isTrue(t.resolved)?'dim':'')+'" data-id="'+esc(t.id)+'"><div class="t"><span>'+(isTrue(t.resolved)?'✓ ':'◆ ')+esc(t.content)+'</span></div><div class="m"><span>'+(ch?'第'+ch.order+'章':'')+'</span></div></div>';
+    });
+    if(!S.threads.length) html='<div class="empty" style="padding-top:40px;font-size:13px">還沒有伏筆</div>';
+  }
+  el.innerHTML=html;
+  Array.prototype.forEach.call(el.querySelectorAll('.item'),function(it){
+    it.onclick=function(){ var id=it.getAttribute('data-id'); if(S.tab==='chapters') openChapter(id); else openForm(S.tab, id); };
+  });
+}
+function isTrue(v){ return v===true||String(v).toUpperCase()==='TRUE'; }
+function chapterById(id){ for(var i=0;i<S.chapters.length;i++) if(S.chapters[i].id===id) return S.chapters[i]; return null; }
+
+$('addBtn').onclick=function(){
+  if(S.tab==='chapters'){
+    if(S.dirty && !confirm('有未存的內容，先存檔嗎？按「取消」放棄變更。')) {} else if(S.dirty){ return saveChapter().then(createChapter); }
+    createChapter();
+  } else openForm(S.tab, null);
+};
+function createChapter(){
+  var title=prompt('章節標題（可以之後改）','');
+  if(title===null) return;
+  toast('建立中…',5000);
+  apiPost('createChapter',{title:title||'未命名'}).then(function(r){
+    return apiGet({action:'all',pass:S.pass}).then(function(j){ applyAll(j); openChapter(r.id); toast('已建立第 '+r.order+' 章，Doc 也開好了'); });
+  }).catch(function(e){ toast('建立失敗：'+e.message,3000); });
+}
+
+// ───────── 章節編輯 ─────────
+function guardDirty(){ if(!S.dirty) return true; return confirm('有未存的內容，離開會丟掉。確定？'); }
+
+function openChapter(id){
+  if(S.cur && S.cur.id===id && S.curKind==='chapter') return;
+  if(!guardDirty()) return;
+  var meta=chapterById(id); if(!meta) return;
+  S.curKind='chapter'; S.cur=null; S.dirty=false;
+  $('page').innerHTML='<div class="empty">載入中…</div>';
+  renderList();
+  apiGet({action:'chapter',id:id,pass:S.pass}).then(function(j){
+    S.cur=j.chapter; S.savedWords=Number(S.cur.word_count)||0;
+    renderChapter(); renderRight();
+    // 本機草稿
+    var draft=null; try{ draft=JSON.parse(localStorage.getItem('loom_draft_'+id)||'null'); }catch(_){}
+    if(draft && draft.text!==S.cur.body && draft.at>new Date(S.cur.updated_at||0).getTime()){
+      showBanner('warn','這台瀏覽器有一份沒存成功的草稿（'+fmtDate(new Date(draft.at).toISOString())+' '+fmtTime(new Date(draft.at).toISOString())+'）。','載入草稿',function(){ setEditorText(draft.text); markDirty(); hideBanner(); });
+    } else if(S.cur.doc_newer){
+      showBanner('info','Google Doc 那份比較新，看起來妳直接在 Docs 改過。','從 Doc 載入',function(){ pullFromDoc(); });
+    }
+  }).catch(function(e){ $('page').innerHTML='<div class="empty">讀取失敗：'+esc(e.message)+'</div>'; });
+}
+
+function renderChapter(){
+  var c=S.cur;
+  var html=''+
+    '<div id="banner"></div>'+
+    '<div class="head"><div class="no">第'+esc(c.order)+'章</div><input class="title" id="fTitle" placeholder="章節標題" value="'+esc(c.title)+'"></div>'+
+    '<div class="meta">'+
+      '<label>狀態 <select id="fStatus">'+STATUSES.map(function(s){return '<option '+(s===c.status?'selected':'')+'>'+s+'</option>';}).join('')+'</select></label>'+
+      '<label>視角 <input id="fPov" value="'+esc(c.pov)+'" placeholder="誰的眼睛"></label>'+
+      '<label>故事時間 <input id="fTime" value="'+esc(c.story_time)+'" placeholder="第 3 日"></label>'+
+      '<label class="toggle"><input type="checkbox" id="fPublic" '+(c.public?'checked':'')+'> 公開給讀者</label>'+
+      '<details style="width:100%"><summary>一句話摘要</summary><textarea id="fSummary" placeholder="這章發生了什麼、要達成什麼">'+esc(c.summary)+'</textarea></details>'+
+    '</div>'+
+    '<div id="editor" contenteditable="true" spellcheck="false"></div>'+
+    '<div class="actions">'+
+      '<button class="primary" id="saveBtn">存檔（Ctrl+S）</button>'+
+      '<span style="font-size:12px;color:var(--muted)" id="wc"></span>'+
+      '<span class="sp"></span>'+
+      (c.doc_url?'<a href="'+esc(c.doc_url)+'" target="_blank">在 Google Docs 開啟</a>':'')+
+      '<button id="upBtn" title="往前移">▲</button><button id="downBtn" title="往後移">▼</button>'+
+      '<button class="danger" id="delBtn">刪除本章</button>'+
+    '</div>';
+  $('page').innerHTML=html;
+  setEditorText(c.body||'');
+  try{ document.execCommand('defaultParagraphSeparator',false,'div'); }catch(_){}
+  var ed=$('editor');
+  ed.addEventListener('input',function(){ markDirty(); updateWc(); saveDraftLocal(); });
+  ed.addEventListener('paste',function(e){ e.preventDefault(); var t=(e.clipboardData||window.clipboardData).getData('text/plain'); document.execCommand('insertText',false,t); });
+  ['fTitle','fStatus','fPov','fTime','fPublic','fSummary'].forEach(function(id){ $(id).addEventListener('input',markDirty); $(id).addEventListener('change',markDirty); });
+  $('saveBtn').onclick=function(){ saveChapter(); };
+  $('delBtn').onclick=deleteChapter;
+  $('upBtn').onclick=function(){ moveChapter(-1); };
+  $('downBtn').onclick=function(){ moveChapter(1); };
+  updateWc(); setSaved('ok','已存檔 '+fmtTime(c.updated_at));
+}
+function setEditorText(text){
+  var ed=$('editor'); if(!ed) return;
+  var lines=String(text||'').split('\n');
+  if(lines.length===1 && lines[0]==='') { ed.innerHTML=''; return; }
+  ed.innerHTML=lines.map(function(l){ return '<div>'+(esc(l)||'<br>')+'</div>'; }).join('');
+}
+function getEditorText(){
+  var ed=$('editor'); if(!ed) return '';
+  var t=ed.innerText.replace(/\r/g,'');
+  t=t.replace(/\n{3,}/g,'\n\n');           // 最多保留一個空行
+  return t.replace(/\n+$/,'');
+}
+function updateWc(){
+  var n=countWords(getEditorText());
+  var el=$('wc'); if(el) el.textContent=n+' 字';
+  renderStats(n-S.savedWords);
+}
+function markDirty(){ if(!S.dirty){ S.dirty=true; setSaved('dirty','未存檔'); } scheduleAutosave(); }
+function scheduleAutosave(){ clearTimeout(S.autosaveTimer); S.autosaveTimer=setTimeout(function(){ if(S.dirty&&!S.saving) saveChapter(true); },30000); }
+function saveDraftLocal(){ if(!S.cur) return; try{ localStorage.setItem('loom_draft_'+S.cur.id,JSON.stringify({text:getEditorText(),at:Date.now()})); }catch(_){} }
+
+function collectChapter(){
+  return {
+    id:S.cur.id, title:$('fTitle').value.trim()||'未命名', status:$('fStatus').value,
+    pov:$('fPov').value.trim(), story_time:$('fTime').value.trim(), public:$('fPublic').checked,
+    summary:$('fSummary').value, body:getEditorText()
+  };
+}
+function saveChapter(silent){
+  if(!S.cur||S.curKind!=='chapter'||S.saving) return Promise.resolve();
+  S.saving=true; setSaved('dirty','存檔中…');
+  var d=collectChapter();
+  return apiPost('saveChapter',d).then(function(r){
+    S.saving=false; S.dirty=false;
+    var now=new Date().toISOString();
+    for(var k in d) if(k!=='body') S.cur[k]=d[k];
+    S.cur.body=d.body; S.cur.word_count=r.word_count; S.cur.updated_at=now; S.cur.doc_newer=false;
+    var m=chapterById(S.cur.id); if(m){ for(var k2 in d) if(k2!=='body') m[k2]=d[k2]; m.word_count=r.word_count; m.updated_at=now; }
+    if(r.words_delta) S.log.push({id:'tmp',date:todayStr(),chapter_id:S.cur.id,words_delta:r.words_delta,note:'',created_at:now});
+    S.savedWords=r.word_count;
+    try{ localStorage.removeItem('loom_draft_'+S.cur.id); }catch(_){}
+    setSaved('ok','已存檔 '+fmtTime(now)); renderList(); renderCal(); renderStats(0); renderRight(); hideBanner();
+    if(!silent) toast('已存檔，Doc 同步更新');
+  }).catch(function(e){ S.saving=false; setSaved('bad','存檔失敗'); toast('存檔失敗：'+e.message+'（內容還留在這裡和本機草稿）',4000); });
+}
+function pullFromDoc(){
+  toast('從 Doc 載入中…',4000);
+  apiPost('pullFromDoc',{id:S.cur.id}).then(function(r){
+    S.cur.body=r.body; S.cur.word_count=r.word_count; S.savedWords=r.word_count; S.cur.doc_newer=false;
+    var m=chapterById(S.cur.id); if(m) m.word_count=r.word_count;
+    setEditorText(r.body); S.dirty=false; updateWc(); renderList(); hideBanner(); setSaved('ok','已從 Doc 載入'); toast('已載入 Doc 的版本');
+  }).catch(function(e){ toast('載入失敗：'+e.message,3000); });
+}
+function deleteChapter(){
+  var c=S.cur;
+  if(!confirm('刪除「第'+c.order+'章 '+c.title+'」？Doc 會移到垃圾桶，Sheet 那列會刪掉。')) return;
+  apiPost('deleteChapter',{id:c.id}).then(function(){ S.cur=null; S.dirty=false; $('page').innerHTML='<div class="empty">已刪除。</div>'; return apiGet({action:'all',pass:S.pass}); }).then(applyAll).then(function(){ toast('已刪除'); }).catch(function(e){ toast('刪除失敗：'+e.message,3000); });
+}
+function moveChapter(dir){
+  var ids=S.chapters.map(function(c){return c.id;});
+  var i=ids.indexOf(S.cur.id), j=i+dir;
+  if(j<0||j>=ids.length) return;
+  var t=ids[i]; ids[i]=ids[j]; ids[j]=t;
+  apiPost('reorder',{ids:ids}).then(function(){ return apiGet({action:'all',pass:S.pass}); }).then(function(jj){ applyAll(jj); var m=chapterById(S.cur.id); S.cur.order=m.order; document.querySelector('.head .no').textContent='第'+m.order+'章'; toast('順序已調整'); }).catch(function(e){ toast('調整失敗：'+e.message,3000); });
+}
+function showBanner(kind,text,btnText,fn){
+  var b=$('banner'); if(!b) return;
+  b.innerHTML='<div class="banner '+kind+'"><span>'+esc(text)+'</span><span class="sp"></span><button id="bannerBtn">'+esc(btnText)+'</button><button id="bannerX">關閉</button></div>';
+  $('bannerBtn').onclick=fn; $('bannerX').onclick=hideBanner;
+}
+function hideBanner(){ var b=$('banner'); if(b) b.innerHTML=''; }
+
+document.addEventListener('keydown',function(e){
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){ e.preventDefault(); if(S.curKind==='chapter') saveChapter(); else if(S.curKind!=='chapter'&&$('formSave')) $('formSave').click(); }
+});
+window.addEventListener('beforeunload',function(e){ if(S.dirty){ e.preventDefault(); e.returnValue=''; } });
+
+// ───────── 角色／世界／伏筆 表單 ─────────
+function openForm(kind, id){
+  if(!guardDirty()) return;
+  var rec=null;
+  var list=kind==='characters'?S.characters:kind==='world'?S.world:S.threads;
+  if(id) for(var i=0;i<list.length;i++) if(list[i].id===id) rec=list[i];
+  S.curKind=kind==='characters'?'character':kind==='world'?'world':'thread'; S.cur=rec||{id:''}; S.dirty=false;
+  renderList();
+  var h='';
+  if(kind==='characters'){
+    var c=rec||{};
+    h='<div class="form"><h2>'+(rec?'角色':'新增角色')+'</h2>'+
+      '<div class="row"><label>名字<input id="f_name" value="'+esc(c.name)+'"></label><label>身分／定位<input id="f_role" value="'+esc(c.role)+'" placeholder="主角、反派、配角…"></label></div>'+
+      '<label>一句話描述（會顯示在寫作時的右欄）<input id="f_summary" value="'+esc(c.summary)+'"></label>'+
+      '<label>詳細設定<textarea id="f_notes" placeholder="外貌、性格、背景、口頭禪、已經在哪章說過什麼…">'+esc(c.notes)+'</textarea></label>'+
+      '<label>初次登場章節<select id="f_first"><option value="">—</option>'+S.chapters.map(function(ch){return '<option value="'+esc(ch.id)+'" '+(ch.id===c.first_chapter?'selected':'')+'>第'+ch.order+'章 '+esc(ch.title)+'</option>';}).join('')+'</select></label>'+
+      '<div class="actions"><button class="primary" id="formSave">儲存</button><span class="sp"></span>'+(rec?'<button class="danger" id="formDel">刪除</button>':'')+'</div></div>';
+  } else if(kind==='world'){
+    var w=rec||{};
+    h='<div class="form"><h2>'+(rec?'世界觀設定':'新增設定')+'</h2>'+
+      '<div class="row"><label>名稱<input id="f_name" value="'+esc(w.name)+'"></label><label>分類<input id="f_category" value="'+esc(w.category)+'" placeholder="地點、組織、科學、物品、術語…"></label></div>'+
+      '<label>內容<textarea id="f_content" style="min-height:260px">'+esc(w.content)+'</textarea></label>'+
+      '<div class="actions"><button class="primary" id="formSave">儲存</button><span class="sp"></span>'+(rec?'<button class="danger" id="formDel">刪除</button>':'')+'</div></div>';
+  } else {
+    var t=rec||{};
+    h='<div class="form"><h2>'+(rec?'伏筆':'新增伏筆')+'</h2>'+
+      '<label>埋了什麼<input id="f_content" value="'+esc(t.content)+'" placeholder="手記最後一頁被撕掉"></label>'+
+      '<div class="row"><label>埋在哪章<select id="f_chapter"><option value="">—</option>'+S.chapters.map(function(ch){return '<option value="'+esc(ch.id)+'" '+(ch.id===t.chapter_id?'selected':'')+'>第'+ch.order+'章 '+esc(ch.title)+'</option>';}).join('')+'</select></label>'+
+      '<label>已收回？<select id="f_resolved"><option value="false" '+(!isTrue(t.resolved)?'selected':'')+'>還沒</option><option value="true" '+(isTrue(t.resolved)?'selected':'')+'>收了</option></select></label>'+
+      '<label>收在哪章<select id="f_rchapter"><option value="">—</option>'+S.chapters.map(function(ch){return '<option value="'+esc(ch.id)+'" '+(ch.id===t.resolved_chapter?'selected':'')+'>第'+ch.order+'章 '+esc(ch.title)+'</option>';}).join('')+'</select></label></div>'+
+      '<div class="actions"><button class="primary" id="formSave">儲存</button><span class="sp"></span>'+(rec?'<button class="danger" id="formDel">刪除</button>':'')+'</div></div>';
+  }
+  $('page').innerHTML=h;
+  var actionSave=kind==='characters'?'saveCharacter':kind==='world'?'saveWorld':'saveThread';
+  var actionDel=kind==='characters'?'deleteCharacter':kind==='world'?'deleteWorld':'deleteThread';
+  $('formSave').onclick=function(){
+    var d={id:(rec&&rec.id)||''};
+    if(kind==='characters'){ d.name=$('f_name').value.trim(); d.role=$('f_role').value.trim(); d.summary=$('f_summary').value.trim(); d.notes=$('f_notes').value; d.first_chapter=$('f_first').value; if(!d.name) return toast('名字不能空'); }
+    else if(kind==='world'){ d.name=$('f_name').value.trim(); d.category=$('f_category').value.trim(); d.content=$('f_content').value; if(!d.name) return toast('名稱不能空'); }
+    else { d.content=$('f_content').value.trim(); d.chapter_id=$('f_chapter').value; d.resolved=$('f_resolved').value==='true'; d.resolved_chapter=$('f_rchapter').value; if(!d.content) return toast('內容不能空'); }
+    apiPost(actionSave,d).then(function(){ return apiGet({action:'all',pass:S.pass}); }).then(function(j){ applyAll(j); toast('已儲存'); S.cur=null; renderList(); $('page').innerHTML='<div class="empty">已儲存。</div>'; }).catch(function(e){ toast('儲存失敗：'+e.message,3000); });
+  };
+  if($('formDel')) $('formDel').onclick=function(){
+    if(!confirm('確定刪除？')) return;
+    apiPost(actionDel,{id:rec.id}).then(function(){ return apiGet({action:'all',pass:S.pass}); }).then(function(j){ applyAll(j); S.cur=null; renderList(); $('page').innerHTML='<div class="empty">已刪除。</div>'; toast('已刪除'); }).catch(function(e){ toast('刪除失敗：'+e.message,3000); });
+  };
+}
+
+// ───────── 右欄 ─────────
+function renderRight(){
+  var rc=$('rChars'), rt=$('rThreads'), rl=$('rLog');
+  if(S.curKind==='chapter' && S.cur){
+    var body=(S.cur.body||'')+' '+(S.cur.summary||'');
+    var hit=S.characters.filter(function(c){ return c.name && body.indexOf(c.name)!==-1; });
+    if(!hit.length) rc.innerHTML='<div class="none">正文裡還沒出現已建檔的角色</div>';
+    else rc.innerHTML=hit.map(function(c){
+      var cnt=S.chapters.filter(function(ch){ return false; }).length;
+      return '<div class="card" data-id="'+esc(c.id)+'"><div class="n"><div class="av">'+esc(String(c.name).charAt(0))+'</div><div class="nm">'+esc(c.name)+'</div><div class="c">'+esc(c.role||'')+'</div></div>'+(c.summary?'<div class="d">'+esc(c.summary)+'</div>':'')+'</div>';
+    }).join('');
+    Array.prototype.forEach.call(rc.querySelectorAll('.card'),function(el){ el.onclick=function(){ S.tab='characters'; Array.prototype.forEach.call(document.querySelectorAll('#left .tabs button'),function(x){x.classList.toggle('on',x.getAttribute('data-tab')==='characters');}); openForm('characters',el.getAttribute('data-id')); }; });
+  } else rc.innerHTML='<div class="none">開啟章節後顯示</div>';
+
+  var open=S.threads.filter(function(t){ return !isTrue(t.resolved); });
+  if(!open.length) rt.innerHTML='<div class="none">沒有未收的伏筆</div>';
+  else rt.innerHTML=open.map(function(t){ var ch=chapterById(t.chapter_id); return '<div class="thread" data-id="'+esc(t.id)+'"><span class="k">◆</span><span>'+(ch?'第'+ch.order+'章：':'')+esc(t.content)+'</span></div>'; }).join('');
+  Array.prototype.forEach.call(rt.querySelectorAll('.thread'),function(el){ el.onclick=function(){ S.tab='threads'; Array.prototype.forEach.call(document.querySelectorAll('#left .tabs button'),function(x){x.classList.toggle('on',x.getAttribute('data-tab')==='threads');}); openForm('threads',el.getAttribute('data-id')); }; });
+
+  var notes=S.log.filter(function(l){ return l.note; }).slice(-4).reverse();
+  rl.innerHTML=notes.length?notes.map(function(l){ return '<div class="logline">'+esc(l.date)+'　'+esc(l.note)+'</div>'; }).join(''):'<div class="none">—</div>';
+}
+$('noteBtn').onclick=function(){
+  var n=$('note').value.trim(); if(!n) return;
+  apiPost('addLog',{chapter_id:(S.curKind==='chapter'&&S.cur)?S.cur.id:'',words_delta:0,note:n}).then(function(){ S.log.push({id:'tmp',date:todayStr(),chapter_id:'',words_delta:0,note:n,created_at:new Date().toISOString()}); $('note').value=''; renderRight(); toast('記下了'); }).catch(function(e){ toast('失敗：'+e.message,3000); });
+};
+
+// ───────── 統計與日曆 ─────────
+function wordsByDate(){
+  var m={};
+  S.log.forEach(function(l){ var d=String(l.date).slice(0,10); m[d]=(m[d]||0)+(Number(l.words_delta)||0); });
+  return m;
+}
+function renderStats(unsaved){
+  var m=wordsByDate(), t=todayStr();
+  var today=(m[t]||0)+(unsaved||0);
+  $('statToday').textContent='今日 '+(today>=0?'+':'')+today+' 字';
+  var streak=0, d=new Date();
+  if(!(m[t]>0)&&!(unsaved>0)) d.setDate(d.getDate()-1);
+  for(;;){ var k=d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); if(m[k]>0||(k===t&&unsaved>0)){streak++; d.setDate(d.getDate()-1);} else break; if(streak>3650) break; }
+  $('statStreak').textContent='連續 '+streak+' 天';
+}
+function renderCal(){
+  var m=wordsByDate(), now=new Date(), y=now.getFullYear(), mo=now.getMonth();
+  var first=new Date(y,mo,1), days=new Date(y,mo+1,0).getDate(), t=todayStr();
+  var offset=(first.getDay()+6)%7; // 週一起
+  var html='', total=0;
+  for(var i=0;i<offset;i++) html+='<div class="d off"></div>';
+  for(var d=1;d<=days;d++){
+    var k=y+'-'+pad2(mo+1)+'-'+pad2(d), n=m[k]||0; total+=n;
+    var lv=n<=0?'':n<500?'l1':n<1500?'l2':'l3';
+    html+='<div class="d '+lv+' '+(k===t?'today':'')+'" title="'+k+'：'+n+' 字"></div>';
+  }
+  $('calGrid').innerHTML=html;
+  $('calTitle').textContent='寫作日曆・'+(mo+1)+' 月';
+  var all=S.chapters.reduce(function(s,c){return s+(Number(c.word_count)||0);},0);
+  $('calFoot').textContent='本月 '+total+' 字・全書 '+all+' 字';
+}
+
+// ───────── 啟動 ─────────
+if(API_URL.indexOf('http')!==0){ $('passErr').textContent='還沒填 API_URL（檔案最上面的設定區）'; }
+else { var saved=''; try{ saved=localStorage.getItem('loom_pass')||''; }catch(_){} if(saved){ $('passIn').value=saved; tryPass(saved); } }
+})();
+</script>
+</body>
+</html>
