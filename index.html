@@ -3,221 +3,119 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Loom</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
-<script>
-// ══════════════════════════════════════════════
-//  設定區：只改這裡
-// ══════════════════════════════════════════════
-var API_URL     = 'https://script.google.com/macros/s/AKfycbwWw3njCkyrj4P1I2SdnY3Vcy9p9eeoTGaQYGoW_eZ_fmFoBg--qAo2s5DRmtdGiugx9g/exec';
-var BOOK_STATUS = '連載中';                    // 連載中 / 已完結
-var BOOK_INTRO  = '';                          // 作品簡介，兩三句；留空就不顯示
-// ══════════════════════════════════════════════
-</script>
+<title>沙漠之鷹</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#1e1b18; --panel:#24201c; --line:#332e29; --line2:#4a433c;
-  --ink:#e8e1d5; --soft:#c9bda9; --muted:#9a8f84; --faint:#5a534c;
-  --accent:#d9a066; --accent2:#f0c08a;
+  --bg:#f4efe6; --ink:#2a2622; --muted:#7d7266; --line:#ddd3c4; --accent:#8a6d3b; --panel:#fbf8f2;
 }
-:root[data-theme="light"]{
-  --bg:#f4efe6; --panel:#faf7f1; --line:#ddd3c4; --line2:#c9bda9;
-  --ink:#2a2622; --soft:#55504a; --muted:#7a716a; --faint:#9a8f84;
-  --accent:#a8612a; --accent2:#7c4419;
+[data-theme="dark"]{
+  --bg:#1a1714; --ink:#e8e0d4; --muted:#9a8f82; --line:#3a332c; --accent:#c9a15a; --panel:#221e1a;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif TC",serif;font-size:18px;line-height:2;min-height:100vh}
-button{font-family:"Noto Sans TC",system-ui,sans-serif;cursor:pointer}
-a{color:var(--accent)} a:hover{color:var(--accent2)}
-
-header{position:sticky;top:0;z-index:10;height:56px;padding:0 20px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--line);background:var(--bg)}
-header .loom{font-family:"Noto Sans TC",sans-serif;font-size:13px;color:var(--muted);letter-spacing:1px}
-header .book{font-size:15px;font-weight:600;letter-spacing:1px;white-space:nowrap}
-header .author{font-family:"Noto Sans TC",sans-serif;font-size:12px;color:var(--muted)}
-header .sp{flex:1}
-header button{font-size:12px;padding:5px 12px;border:1px solid var(--line2);border-radius:6px;background:transparent;color:var(--soft)}
-header button:hover{border-color:var(--accent);color:var(--ink)}
-#tocBtn{display:none}
-#progress{position:sticky;top:56px;z-index:10;height:3px;background:var(--line)}
-#progress div{height:100%;width:0;background:var(--accent);transition:width .1s}
-
-main{display:flex;min-height:calc(100vh - 59px)}
-nav{width:260px;flex:none;padding:28px 24px;border-right:1px solid var(--line);font-family:"Noto Sans TC",sans-serif;display:flex;flex-direction:column;gap:4px;position:sticky;top:59px;align-self:flex-start;max-height:calc(100vh - 59px);overflow-y:auto}
-nav .h{font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:8px}
-nav .c{padding:8px 10px;border-radius:6px;font-size:13px;color:var(--soft);display:flex;gap:10px;cursor:pointer;line-height:1.5;text-decoration:none}
-nav .c:hover{background:var(--panel);color:var(--ink)}
-nav .c.on{background:var(--panel);color:var(--ink)}
-nav .c .n{color:var(--faint);flex:none} nav .c.on .n{color:var(--accent)}
-nav .c .w{margin-left:auto;font-size:11px;color:var(--faint);flex:none}
-nav .f{margin-top:auto;padding-top:16px;font-size:11px;color:var(--faint);line-height:1.7}
-
-article{flex:1;display:flex;justify-content:center;min-width:0}
-article .page{width:min(640px,100%);padding:56px 20px 96px;display:flex;flex-direction:column;gap:28px}
-
-.cover{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding-top:40px}
-.cover .t{font-size:36px;font-weight:700;letter-spacing:6px}
-.cover .a{font-family:"Noto Sans TC",sans-serif;font-size:13px;color:var(--muted);letter-spacing:2px}
-.cover .rule{width:40px;height:1px;background:var(--line2);margin:8px 0}
-.cover .intro{font-size:16px;line-height:2;color:var(--soft);text-align:left;max-width:520px}
-.cover .meta{font-family:"Noto Sans TC",sans-serif;font-size:12px;color:var(--faint);display:flex;gap:16px}
-.cover .start{margin-top:12px;font-family:"Noto Sans TC",sans-serif;font-size:14px;padding:10px 26px;border:1px solid var(--accent);border-radius:6px;background:transparent;color:var(--accent);text-decoration:none}
-.cover .start:hover{background:var(--accent);color:var(--bg)}
-
-.chead{display:flex;flex-direction:column;align-items:center;gap:10px}
-.chead .no{font-size:13px;color:var(--accent);letter-spacing:4px}
-.chead .t{font-size:30px;font-weight:600;letter-spacing:2px;text-align:center}
-.chead .rule{width:40px;height:1px;background:var(--line2);margin-top:6px}
-.chead .w{font-family:"Noto Sans TC",sans-serif;font-size:11px;color:var(--faint)}
-
-.body{display:flex;flex-direction:column}
-.body p{margin:0;text-indent:2em;min-height:2em}
-.body p.sep{text-align:center;text-indent:0;color:var(--muted);letter-spacing:8px;padding:14px 0}
-
-.pager{display:flex;justify-content:space-between;align-items:center;padding-top:18px;border-top:1px solid var(--line);font-family:"Noto Sans TC",sans-serif;font-size:13px;gap:12px}
-.pager a{text-decoration:none;color:var(--soft)} .pager a:hover{color:var(--ink)}
-.pager .m{color:var(--faint)}
-.pager .end{color:var(--faint)}
-
-.empty{color:var(--faint);text-align:center;padding-top:120px;font-family:"Noto Sans TC",sans-serif;font-size:14px;line-height:2}
-
-@media (max-width:820px){
-  body{font-size:17px}
-  #tocBtn{display:inline-block}
-  nav{position:fixed;top:59px;left:0;bottom:0;width:min(300px,85vw);background:var(--bg);transform:translateX(-100%);transition:transform .2s;z-index:9;max-height:none}
-  nav.open{transform:none;box-shadow:4px 0 24px rgba(0,0,0,.3)}
-  header .author{display:none}
-  article .page{padding-top:32px}
-  .cover .t{font-size:28px}
-}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif TC",serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+button{font-family:inherit;background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:13px}
+button:hover{color:var(--ink);border-color:var(--accent)}
+.progress{position:fixed;top:0;left:0;height:2px;background:var(--accent);width:0;z-index:5}
+.bar{position:sticky;top:0;background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:10px 20px;z-index:4}
+.bar .b{flex:1;font-size:15px;letter-spacing:.1em}
+.bar .b small{color:var(--muted);margin-left:8px;letter-spacing:0;font-size:12px}
+.wrap{max-width:680px;margin:0 auto;padding:40px 24px 120px}
+/* 目錄 */
+.cover{text-align:center;padding:40px 0 30px}
+.cover h1{font-size:34px;letter-spacing:.2em;margin:0 0 6px;font-weight:700}
+.cover .au{color:var(--muted);letter-spacing:.2em}
+.cover .n{color:var(--muted);font-size:13px;margin-top:14px}
+.toc a{display:flex;gap:14px;padding:14px 6px;border-bottom:1px solid var(--line);color:var(--ink);align-items:baseline}
+.toc a:hover{color:var(--accent)}
+.toc .o{color:var(--muted);font-size:13px;min-width:44px}
+.toc .t{flex:1}
+.toc .w{color:var(--muted);font-size:12px}
+/* 內文 */
+.chapter h2{text-align:center;font-size:22px;letter-spacing:.1em;margin:0 0 6px}
+.chapter .sub{text-align:center;color:var(--muted);font-size:13px;margin-bottom:40px}
+.body{font-size:var(--fs,18px);line-height:2}
+.body p{margin:0 0 .8em;text-indent:2em}
+.body p.br{text-align:center;text-indent:0;color:var(--muted);letter-spacing:.6em;margin:1.6em 0}
+.nav{display:flex;justify-content:space-between;margin-top:60px;padding-top:20px;border-top:1px solid var(--line)}
+.nav a{padding:8px 0}
+.empty{text-align:center;color:var(--muted);padding:80px 0}
+.tools{display:flex;gap:6px}
+@media (max-width:600px){.wrap{padding:24px 18px 100px}.cover h1{font-size:28px}}
 </style>
 </head>
 <body>
-<header>
-  <button id="tocBtn">目錄</button>
-  <span class="loom">Loom</span>
-  <a id="bookLink" href="#" style="text-decoration:none;color:inherit"><span class="book" id="bookName"></span></a>
-  <span class="author" id="authorName"></span>
-  <span class="sp"></span>
-  <button id="fMinus" title="字小一點">A−</button>
-  <button id="fPlus" title="字大一點">A＋</button>
-  <button id="themeBtn">淺色</button>
-</header>
-<div id="progress"><div id="bar"></div></div>
-
-<main>
-  <nav id="nav">
-    <div class="h" id="navHead">目錄</div>
-    <div id="toc"></div>
-    <div class="f" id="navFoot"></div>
-  </nav>
-  <article><div class="page" id="page"><div class="empty">載入中…</div></div></article>
-</main>
+<div class="progress" id="progress"></div>
+<div class="bar">
+  <a href="#" class="b" onclick="go('');return false"><span id="bookTitle">沙漠之鷹</span><small id="bookAuthor"></small></a>
+  <div class="tools">
+    <button onclick="zoom(-1)" title="縮小">A−</button>
+    <button onclick="zoom(1)" title="放大">A+</button>
+    <button onclick="toggleTheme()" title="日夜">◐</button>
+  </div>
+</div>
+<div class="wrap" id="view"><div class="empty">載入中…</div></div>
 
 <script>
-(function(){
-'use strict';
-var $=function(id){return document.getElementById(id);};
-var S={book:'',author:'',chapters:[],cur:null,fs:18};
-function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
-function pad2(n){n=String(n);return n.length<2?'0'+n:n;}
-function fmtDate(iso){if(!iso)return'';var d=new Date(iso);return d.getFullYear()+'.'+pad2(d.getMonth()+1)+'.'+pad2(d.getDate());}
+var API = 'https://script.google.com/macros/s/AKfycbwWw3njCkyrj4P1I2SdnY3Vcy9p9eeoTGaQYGoW_eZ_fmFoBg--qAo2s5DRmtdGiugx9g/exec';
+var DATA = null;
+var fs = Number(localStorage.getItem('loom_reader_fs') || 18);
+var theme = localStorage.getItem('loom_reader_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+applyTheme(); applyFs();
 
-// 主題與字級（記在這台瀏覽器）
-function applyPrefs(){
-  var th='';try{th=localStorage.getItem('loom_theme')||'';}catch(_){}
-  if(th==='light'){document.documentElement.setAttribute('data-theme','light');$('themeBtn').textContent='深色';}
-  else{document.documentElement.removeAttribute('data-theme');$('themeBtn').textContent='淺色';}
-  var fs=18;try{fs=Number(localStorage.getItem('loom_fs'))||18;}catch(_){}
-  S.fs=Math.min(26,Math.max(14,fs));document.body.style.fontSize=S.fs+'px';
+fetch(API + '?action=public').then(function (r) { return r.json(); }).then(function (j) {
+  if (!j.ok) throw new Error(j.error);
+  DATA = j;
+  document.getElementById('bookTitle').textContent = j.book || '沙漠之鷹';
+  document.getElementById('bookAuthor').textContent = j.author || '';
+  document.title = j.book || '沙漠之鷹';
+  render();
+}).catch(function (e) { document.getElementById('view').innerHTML = '<div class="empty">讀不到內容：' + esc(e.message) + '</div>'; });
+
+window.addEventListener('hashchange', render);
+function go(id) { location.hash = id ? 'ch=' + id : ''; }
+function render() {
+  if (!DATA) return;
+  var m = location.hash.match(/ch=([^&]+)/);
+  var view = document.getElementById('view');
+  window.scrollTo(0, 0);
+  if (!m) return renderToc(view);
+  var i = DATA.chapters.map(function (c) { return String(c.id); }).indexOf(m[1]);
+  if (i === -1) return renderToc(view);
+  var c = DATA.chapters[i], prev = DATA.chapters[i - 1], next = DATA.chapters[i + 1];
+  var h = '<div class="chapter"><h2>' + esc(c.title) + '</h2><div class="sub">第 ' + c.order + ' 章 · ' + (c.word_count || 0) + ' 字</div><div class="body">';
+  String(c.body || '').split(/\n+/).forEach(function (line) {
+    line = line.replace(/^[\s\u3000]+|\s+$/g, '');
+    if (!line) return;
+    if (/^[\*＊\-—─]{3,}$/.test(line)) h += '<p class="br">✦ ✦ ✦</p>';
+    else h += '<p>' + esc(line) + '</p>';
+  });
+  h += '</div><div class="nav"><span>' + (prev ? '<a href="#ch=' + prev.id + '">← ' + esc(prev.title) + '</a>' : '') + '</span><a href="#">目錄</a><span>' + (next ? '<a href="#ch=' + next.id + '">' + esc(next.title) + ' →</a>' : '') + '</span></div></div>';
+  view.innerHTML = h;
+  localStorage.setItem('loom_reader_last', c.id);
 }
-$('themeBtn').onclick=function(){var cur=document.documentElement.getAttribute('data-theme');try{localStorage.setItem('loom_theme',cur==='light'?'dark':'light');}catch(_){}applyPrefs();};
-$('fPlus').onclick=function(){try{localStorage.setItem('loom_fs',S.fs+1);}catch(_){}applyPrefs();};
-$('fMinus').onclick=function(){try{localStorage.setItem('loom_fs',S.fs-1);}catch(_){}applyPrefs();};
-$('tocBtn').onclick=function(){$('nav').classList.toggle('open');};
-applyPrefs();
-
-// 進度條
-window.addEventListener('scroll',function(){
-  var h=document.documentElement;var max=h.scrollHeight-h.clientHeight;
-  $('bar').style.width=(max>0?Math.min(100,h.scrollTop/max*100):0)+'%';
+function renderToc(view) {
+  var last = localStorage.getItem('loom_reader_last');
+  var total = DATA.chapters.reduce(function (s, c) { return s + (Number(c.word_count) || 0); }, 0);
+  var h = '<div class="cover"><h1>' + esc(DATA.book || '') + '</h1><div class="au">' + esc(DATA.author || '') + '</div><div class="n">' + DATA.chapters.length + ' 章 · ' + total + ' 字' + (last && DATA.chapters.some(function (c) { return String(c.id) === last; }) ? ' · <a href="#ch=' + last + '">繼續上次</a>' : '') + '</div></div>';
+  if (!DATA.chapters.length) h += '<div class="empty">還沒有公開的章節。</div>';
+  h += '<div class="toc">' + DATA.chapters.map(function (c) {
+    return '<a href="#ch=' + c.id + '"><span class="o">' + pad(c.order) + '</span><span class="t">' + esc(c.title) + '</span><span class="w">' + (c.word_count || 0) + ' 字</span></a>';
+  }).join('') + '</div>';
+  view.innerHTML = h;
+}
+function pad(n) { n = Number(n) || 0; return (n < 10 ? '0' : '') + n; }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+function zoom(d) { fs = Math.max(14, Math.min(26, fs + d)); localStorage.setItem('loom_reader_fs', fs); applyFs(); }
+function applyFs() { document.documentElement.style.setProperty('--fs', fs + 'px'); }
+function toggleTheme() { theme = theme === 'dark' ? 'light' : 'dark'; localStorage.setItem('loom_reader_theme', theme); applyTheme(); }
+function applyTheme() { document.documentElement.setAttribute('data-theme', theme); }
+window.addEventListener('scroll', function () {
+  var h = document.documentElement, p = h.scrollHeight - h.clientHeight;
+  document.getElementById('progress').style.width = (p > 0 ? (h.scrollTop / p * 100) : 0) + '%';
 });
-
-// 載入
-function load(){
-  if(API_URL.indexOf('http')!==0){$('page').innerHTML='<div class="empty">還沒填 API_URL（檔案最上面的設定區）</div>';return;}
-  fetch(API_URL+'?action=public').then(function(r){return r.json();}).then(function(j){
-    if(!j.ok)throw new Error(j.error||'讀取失敗');
-    S.book=j.book;S.author=j.author;
-    S.chapters=(j.chapters||[]).sort(function(a,b){return Number(a.order)-Number(b.order);});
-    document.title=S.book+'・'+S.author;
-    $('bookName').textContent=S.book;$('authorName').textContent=S.author;
-    renderToc();route();
-  }).catch(function(e){$('page').innerHTML='<div class="empty">讀取失敗：'+esc(e.message)+'<br>稍後再試一次。</div>';});
-}
-function lastUpdated(){var m='';S.chapters.forEach(function(c){if(c.updated_at>m)m=c.updated_at;});return m;}
-function totalWords(){return S.chapters.reduce(function(s,c){return s+(Number(c.word_count)||0);},0);}
-
-function renderToc(){
-  $('navHead').textContent='目錄・'+S.chapters.length+' 章';
-  $('toc').innerHTML=S.chapters.map(function(c){
-    return '<a class="c '+(S.cur&&S.cur.id===c.id?'on':'')+'" href="#'+esc(c.id)+'"><span class="n">'+pad2(c.order)+'</span><span>'+esc(c.title)+'</span><span class="w">'+(c.word_count||0)+'</span></a>';
-  }).join('')||'<div style="font-size:12px;color:var(--faint)">尚未發布章節</div>';
-  $('navFoot').innerHTML=esc(BOOK_STATUS)+'・全書 '+totalWords()+' 字<br>最後更新 '+esc(fmtDate(lastUpdated()));
-  Array.prototype.forEach.call($('toc').querySelectorAll('.c'),function(a){a.addEventListener('click',function(){$('nav').classList.remove('open');});});
-}
-
-function route(){
-  var id=(location.hash||'').replace(/^#/,'');
-  var c=null;for(var i=0;i<S.chapters.length;i++)if(S.chapters[i].id===id)c=S.chapters[i];
-  S.cur=c;renderToc();
-  if(c)renderChapter(c);else renderCover();
-  window.scrollTo(0,0);
-}
-window.addEventListener('hashchange',route);
-$('bookLink').onclick=function(e){e.preventDefault();location.hash='';};
-
-function renderCover(){
-  var first=S.chapters[0];
-  $('page').innerHTML='<div class="cover">'+
-    '<div class="t">'+esc(S.book)+'</div>'+
-    '<div class="a">'+esc(S.author)+'</div>'+
-    '<div class="rule"></div>'+
-    (BOOK_INTRO?'<div class="intro">'+esc(BOOK_INTRO).replace(/\n/g,'<br>')+'</div>':'')+
-    '<div class="meta"><span>'+esc(BOOK_STATUS)+'</span><span>'+S.chapters.length+' 章</span><span>'+totalWords()+' 字</span><span>更新 '+esc(fmtDate(lastUpdated()))+'</span></div>'+
-    (first?'<a class="start" href="#'+esc(first.id)+'">開始閱讀</a>':'<div class="meta">尚未發布章節</div>')+
-  '</div>';
-}
-
-function renderBody(text){
-  return String(text||'').split('\n').map(function(l){
-    var t=l.trim();
-    if(t==='')return '<p>&nbsp;</p>';
-    if(/^[＊*]{3,}$/.test(t))return '<p class="sep">＊＊＊</p>';
-    return '<p>'+esc(l)+'</p>';
-  }).join('');
-}
-function renderChapter(c){
-  var i=S.chapters.indexOf(c),prev=S.chapters[i-1],next=S.chapters[i+1];
-  $('page').innerHTML=
-    '<div class="chead"><div class="no">第'+esc(c.order)+'章</div><div class="t">'+esc(c.title)+'</div><div class="rule"></div><div class="w">'+(c.word_count||0)+' 字・'+esc(fmtDate(c.updated_at))+'</div></div>'+
-    '<div class="body">'+renderBody(c.body)+'</div>'+
-    '<div class="pager">'+
-      (prev?'<a href="#'+esc(prev.id)+'">← '+pad2(prev.order)+' '+esc(prev.title)+'</a>':'<a href="#">← 封面</a>')+
-      '<span class="m">'+(i+1)+' / '+S.chapters.length+'</span>'+
-      (next?'<a href="#'+esc(next.id)+'">'+pad2(next.order)+' '+esc(next.title)+' →</a>':'<span class="end">'+(BOOK_STATUS==='已完結'?'全書完':'待續')+'</span>')+
-    '</div>';
-}
-
-document.addEventListener('keydown',function(e){
-  if(!S.cur||e.target.tagName==='INPUT')return;
-  var i=S.chapters.indexOf(S.cur);
-  if(e.key==='ArrowRight'&&S.chapters[i+1])location.hash=S.chapters[i+1].id;
-  if(e.key==='ArrowLeft'&&S.chapters[i-1])location.hash=S.chapters[i-1].id;
-});
-
-load();
-})();
 </script>
 </body>
 </html>
