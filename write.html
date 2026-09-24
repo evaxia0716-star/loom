@@ -51,7 +51,11 @@ label{display:block;color:var(--muted);font-size:12px;margin:8px 0 3px}
 .status.err{color:var(--danger)}
 .banner{background:#3a2e1c;color:var(--accent);padding:8px 16px;font-size:13px;display:none;gap:10px;align-items:center}
 .banner.show{display:flex}
-.paper{flex:1;overflow:auto;padding:40px 0 120px}
+.paper{flex:1;overflow:auto;padding:40px 0 120px;position:relative}
+.loading{display:none;position:sticky;top:0;margin:-40px auto 24px;max-width:720px;padding:10px 32px;background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--accent);font-size:13px;align-items:center;gap:10px;z-index:2}
+.loading.show{display:flex}
+.loading span{width:12px;height:12px;border:2px solid var(--accent2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 .sheet{max-width:720px;margin:0 auto;padding:0 32px;font-family:var(--serif);font-size:18px;line-height:1.9;color:var(--ink);outline:none;min-height:60vh;caret-color:var(--accent)}
 .sheet p{margin:0 0 .6em;text-indent:2em}
 .sheet p:empty::before{content:"\200b"}
@@ -126,6 +130,7 @@ kbd{font-size:11px;border:1px solid var(--line);border-radius:3px;padding:0 4px;
       <button class="ghost" onclick="hideBanner()">忽略</button>
     </div>
     <div class="paper" onclick="focusSheet(event)">
+      <div class="loading" id="loading"><span></span>正在從雲端載入這一章…</div>
       <div class="sheet empty" id="sheet" contenteditable="true" spellcheck="false"></div>
     </div>
     <div class="bottombar">
@@ -239,13 +244,30 @@ var autosaveTimer = null;
 var fontSize = Number(localStorage.getItem('loom_font') || 18);
 
 // ══════════ API ══════════
+// Apps Script 偶爾會回一頁 HTML 錯誤頁（Drive 暫時抽風）而不是 JSON；這裡自動重試兩次再放棄
+function parseJson_(r) {
+  return r.text().then(function (t) {
+    try { return JSON.parse(t); }
+    catch (_) { throw new Error(/<!DOCTYPE|<html/i.test(t) ? '__HTML__' : '回應不是 JSON：' + t.slice(0, 60)); }
+  });
+}
+function withRetry_(fn, tries) {
+  tries = tries === undefined ? 2 : tries;
+  return fn().then(parseJson_).catch(function (e) {
+    if (e.message === '__HTML__' || /Failed to fetch|NetworkError/i.test(e.message)) {
+      if (tries > 0) return new Promise(function (res) { setTimeout(res, 1500); }).then(function () { return withRetry_(fn, tries - 1); });
+      throw new Error('後端暫時沒回應（Google 那邊抽風），請再試一次');
+    }
+    throw e;
+  }).then(chk);
+}
 function apiGet(params) {
   var q = Object.keys(params).map(function (k) { return k + '=' + encodeURIComponent(params[k]); }).join('&');
-  return fetch(API + '?' + q).then(function (r) { return r.json(); }).then(chk);
+  return withRetry_(function () { return fetch(API + '?' + q); });
 }
 function apiPost(action, data) {
-  return fetch(API, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({ pass:pass, action:action, data:data }) })
-    .then(function (r) { return r.json(); }).then(chk);
+  var body = JSON.stringify({ pass:pass, action:action, data:data });
+  return withRetry_(function () { return fetch(API, { method:'POST', headers:{'Content-Type':'text/plain'}, body:body }); }, action === 'createChapter' || action === 'addLog' ? 0 : 2);
 }
 function chk(j) { if (!j.ok) throw new Error(j.error || '未知錯誤'); return j; }
 
@@ -298,19 +320,55 @@ function renderChapters() {
 }
 function pad(n) { n = Number(n) || 0; return (n < 10 ? '0' : '') + n; }
 
+// 章節全文快取：第一次載入後留在記憶體，切章不用再等 Apps Script
+var CACHE = {};
+var prefetching = false;
+
+function showChapter_(ch) {
+  cur = ch;
+  var draft = localStorage.getItem('loom_draft_' + ch.id);
+  if (draft && draft !== cur.body && confirm('這台瀏覽器有一份沒送出的草稿，比雲端多 ' + Math.abs(countWords(draft) - countWords(cur.body)) + ' 字。要用草稿嗎？')) cur.body = draft;
+  localStorage.setItem('loom_last', ch.id);
+  fillEditor(); fillMeta(); renderChapters(); renderThreads();
+  dirty = false; setStatus('已同步');
+  document.getElementById('docBanner').classList.toggle('show', !!cur.doc_newer);
+}
+
 function openChapter(id) {
   if (dirty && !confirm('目前章節有未存的修改，要放棄嗎？')) return;
-  setStatus('載入中…');
+  if (CACHE[id]) {
+    // 快取先上，背景再核對一次雲端有沒有更新
+    showChapter_(JSON.parse(JSON.stringify(CACHE[id])));
+    apiGet({ action:'chapter', id:id, pass:pass }).then(function (j) {
+      CACHE[id] = j.chapter;
+      if (cur && cur.id === id && !dirty && j.chapter.body !== cur.body) { showChapter_(j.chapter); setStatus('已更新為雲端最新'); }
+      else if (cur && cur.id === id) { cur.doc_newer = j.chapter.doc_newer; document.getElementById('docBanner').classList.toggle('show', !!cur.doc_newer); }
+    }).catch(function () {});
+    return;
+  }
+  setLoading(true); setStatus('載入中…');
   apiGet({ action:'chapter', id:id, pass:pass }).then(function (j) {
-    cur = j.chapter;
-    var draft = localStorage.getItem('loom_draft_' + id);
-    if (draft && draft !== cur.body && confirm('這台瀏覽器有一份沒送出的草稿，比雲端多 ' + Math.abs(countWords(draft) - countWords(cur.body)) + ' 字。要用草稿嗎？')) cur.body = draft;
-    localStorage.setItem('loom_last', id);
-    fillEditor(); fillMeta(); renderChapters(); renderThreads();
-    dirty = false; setStatus('已同步');
-    document.getElementById('docBanner').classList.toggle('show', !!cur.doc_newer);
-  }).catch(function (e) { setStatus(e.message, 'err'); });
+    CACHE[id] = j.chapter;
+    showChapter_(JSON.parse(JSON.stringify(j.chapter)));
+  }).catch(function (e) { setStatus(e.message, 'err'); }).then(function () { setLoading(false); prefetchAll_(); });
 }
+
+/** 背景逐章預載，讓之後切換是瞬間 */
+function prefetchAll_() {
+  if (prefetching) return;
+  var todo = DB.chapters.filter(function (c) { return !CACHE[c.id]; });
+  if (!todo.length) return;
+  prefetching = true;
+  (function next(i) {
+    if (i >= todo.length) { prefetching = false; return; }
+    apiGet({ action:'chapter', id:todo[i].id, pass:pass })
+      .then(function (j) { CACHE[todo[i].id] = j.chapter; })
+      .catch(function () {})
+      .then(function () { next(i + 1); });
+  })(0);
+}
+
+function setLoading(on) { document.getElementById('loading').classList.toggle('show', !!on); }
 
 // ══════════ 編輯器 ══════════
 var sheet = document.getElementById('sheet');
@@ -375,6 +433,7 @@ function save(quiet) {
   var title = document.getElementById('chTitle').value.trim() || '未命名';
   apiPost('saveChapter', { id:cur.id, title:title, body:body }).then(function (j) {
     cur.body = body; cur.title = title; cur.word_count = j.result.word_count;
+    if (CACHE[cur.id]) { CACHE[cur.id].body = body; CACHE[cur.id].title = title; CACHE[cur.id].word_count = cur.word_count; }
     dirty = false; saving = false;
     localStorage.removeItem('loom_draft_' + cur.id);
     var c = byId(DB.chapters, cur.id); if (c) { c.title = title; c.word_count = cur.word_count; }
@@ -399,7 +458,7 @@ function saveMeta() {
   var d = { id:cur.id, status:document.getElementById('mStatus').value, pov:document.getElementById('mPov').value, story_time:document.getElementById('mTime').value, summary:document.getElementById('mSummary').value, public:document.getElementById('mPublic').checked };
   setStatus('更新中…');
   apiPost('saveChapter', d).then(function () {
-    Object.assign(cur, d); Object.assign(byId(DB.chapters, cur.id) || {}, d);
+    Object.assign(cur, d); Object.assign(byId(DB.chapters, cur.id) || {}, d); if (CACHE[cur.id]) Object.assign(CACHE[cur.id], d);
     renderChapters(); setStatus('已更新');
   }).catch(function (e) { setStatus(e.message, 'err'); });
 }
@@ -413,7 +472,7 @@ function newChapter() {
 function deleteChapter() {
   if (!cur) return;
   if (!confirm('刪除「' + cur.title + '」？Sheet 那列會刪掉，Doc 會進垃圾桶。')) return;
-  apiPost('deleteChapter', { id:cur.id }).then(function () { cur = null; dirty = false; return loadAll(); }).catch(function (e) { setStatus(e.message, 'err'); });
+  apiPost('deleteChapter', { id:cur.id }).then(function () { delete CACHE[cur.id]; cur = null; dirty = false; return loadAll(); }).catch(function (e) { setStatus(e.message, 'err'); });
 }
 function moveChapter(dir) {
   if (!cur) return;
@@ -430,6 +489,7 @@ function pullDoc() {
   setStatus('從 Doc 讀取…');
   apiPost('pullFromDoc', { id:cur.id }).then(function (j) {
     cur.body = j.result.body; cur.word_count = j.result.word_count; cur.doc_newer = false;
+    CACHE[cur.id] = JSON.parse(JSON.stringify(cur));
     fillEditor(); dirty = false; hideBanner(); setStatus('已載入 Doc 版本'); loadAll();
   }).catch(function (e) { setStatus(e.message, 'err'); });
 }
