@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>沙漠之鷹</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2064%2064%22%3E%3Crect%20width=%2264%22%20height=%2264%22%20rx=%2214%22%20fill=%22%23c9a15a%22/%3E%3Cg%20stroke=%22%231a1714%22%20stroke-width=%224%22%20stroke-linecap=%22round%22%20fill=%22none%22%3E%3Cline%20x1=%2220%22%20y1=%2214%22%20x2=%2220%22%20y2=%2250%22/%3E%3Cline%20x1=%2232%22%20y1=%2214%22%20x2=%2232%22%20y2=%2250%22/%3E%3Cline%20x1=%2244%22%20y1=%2214%22%20x2=%2244%22%20y2=%2250%22/%3E%3Cpath%20d=%22M12%2032%20C18%2026,%2024%2038,%2032%2032%20S46%2026,%2052%2032%22/%3E%3C/g%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2064%2064%22%3E%3Crect%20width=%2264%22%20height=%2264%22%20rx=%2214%22%20fill=%22%23c9a15a%22/%3E%3Cg%20stroke=%22%231a1714%22%20stroke-width=%224%22%20stroke-linecap=%22round%22%20fill=%22none%22%3E%3Cline%20x1=%2220%22%20y1=%2214%22%20x2=%2220%22%20y2=%2250%22/%3E%3Cline%20x1=%2232%22%20y1=%2214%22%20x2=%2232%22%20y2=%2250%22/%3E%3Cline%20x1=%2244%22%20y1=%2214%22%20x2=%2244%22%20y2=%2250%22/%3E%3Cpath%20d=%22M12%2032%20C18%2026,%2024%2038,%2032%2032%20S46%2026,%2052%2032%22/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -20,7 +22,8 @@ button{font-family:inherit;background:transparent;color:var(--muted);border:1px 
 button:hover{color:var(--ink);border-color:var(--accent)}
 .progress{position:fixed;top:0;left:0;height:2px;background:var(--accent);width:0;z-index:5}
 .bar{position:sticky;top:0;background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:10px 20px;z-index:4}
-.bar .b{flex:1;font-size:15px;letter-spacing:.1em}
+.bar .b{flex:1;font-size:15px;letter-spacing:.1em;display:flex;align-items:center;gap:10px;color:var(--ink)}
+.bar .logo{width:22px;height:22px}
 .bar .b small{color:var(--muted);margin-left:8px;letter-spacing:0;font-size:12px}
 .wrap{max-width:680px;margin:0 auto;padding:40px 24px 120px}
 /* 目錄 */
@@ -49,7 +52,7 @@ button:hover{color:var(--ink);border-color:var(--accent)}
 <body>
 <div class="progress" id="progress"></div>
 <div class="bar">
-  <a href="#" class="b" onclick="go('');return false"><span id="bookTitle">沙漠之鷹</span><small id="bookAuthor"></small></a>
+  <a href="#" class="b" onclick="go('');return false"><img class="logo" src="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2064%2064%22%3E%3Crect%20width=%2264%22%20height=%2264%22%20rx=%2214%22%20fill=%22%23c9a15a%22/%3E%3Cg%20stroke=%22%231a1714%22%20stroke-width=%224%22%20stroke-linecap=%22round%22%20fill=%22none%22%3E%3Cline%20x1=%2220%22%20y1=%2214%22%20x2=%2220%22%20y2=%2250%22/%3E%3Cline%20x1=%2232%22%20y1=%2214%22%20x2=%2232%22%20y2=%2250%22/%3E%3Cline%20x1=%2244%22%20y1=%2214%22%20x2=%2244%22%20y2=%2250%22/%3E%3Cpath%20d=%22M12%2032%20C18%2026,%2024%2038,%2032%2032%20S46%2026,%2052%2032%22/%3E%3C/g%3E%3C/svg%3E" alt=""><span id="bookTitle">沙漠之鷹</span><small id="bookAuthor"></small></a>
   <div class="tools">
     <button onclick="zoom(-1)" title="縮小">A−</button>
     <button onclick="zoom(1)" title="放大">A+</button>

@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Loom · 作者端</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2064%2064%22%3E%3Crect%20width=%2264%22%20height=%2264%22%20rx=%2214%22%20fill=%22%23c9a15a%22/%3E%3Cg%20stroke=%22%231a1714%22%20stroke-width=%224%22%20stroke-linecap=%22round%22%20fill=%22none%22%3E%3Cline%20x1=%2220%22%20y1=%2214%22%20x2=%2220%22%20y2=%2250%22/%3E%3Cline%20x1=%2232%22%20y1=%2214%22%20x2=%2232%22%20y2=%2250%22/%3E%3Cline%20x1=%2244%22%20y1=%2214%22%20x2=%2244%22%20y2=%2250%22/%3E%3Cpath%20d=%22M12%2032%20C18%2026,%2024%2038,%2032%2032%20S46%2026,%2052%2032%22/%3E%3C/g%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2064%2064%22%3E%3Crect%20width=%2264%22%20height=%2264%22%20rx=%2214%22%20fill=%22%23c9a15a%22/%3E%3Cg%20stroke=%22%231a1714%22%20stroke-width=%224%22%20stroke-linecap=%22round%22%20fill=%22none%22%3E%3Cline%20x1=%2220%22%20y1=%2214%22%20x2=%2220%22%20y2=%2250%22/%3E%3Cline%20x1=%2232%22%20y1=%2214%22%20x2=%2232%22%20y2=%2250%22/%3E%3Cline%20x1=%2244%22%20y1=%2214%22%20x2=%2244%22%20y2=%2250%22/%3E%3Cpath%20d=%22M12%2032%20C18%2026,%2024%2038,%2032%2032%20S46%2026,%2052%2032%22/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -29,7 +31,8 @@ label{display:block;color:var(--muted);font-size:12px;margin:8px 0 3px}
 .app.focus .left,.app.focus .right{display:none}
 /* 左欄 */
 .left{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
-.brand{padding:14px 14px 10px;border-bottom:1px solid var(--line)}
+.brand{padding:14px 14px 10px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
+.brand .logo{width:34px;height:34px;flex:none}
 .brand h1{margin:0;font-family:var(--serif);font-size:18px;color:var(--accent);letter-spacing:.08em}
 .brand small{color:var(--muted)}
 .chapters{flex:1;overflow:auto;padding:6px}
@@ -107,7 +110,7 @@ kbd{font-size:11px;border:1px solid var(--line);border-radius:3px;padding:0 4px;
 <div class="app" id="app">
 
   <aside class="left">
-    <div class="brand"><h1 id="bookTitle">Loom</h1><small id="bookAuthor"></small></div>
+    <div class="brand"><img class="logo" src="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2064%2064%22%3E%3Crect%20width=%2264%22%20height=%2264%22%20rx=%2214%22%20fill=%22%23c9a15a%22/%3E%3Cg%20stroke=%22%231a1714%22%20stroke-width=%224%22%20stroke-linecap=%22round%22%20fill=%22none%22%3E%3Cline%20x1=%2220%22%20y1=%2214%22%20x2=%2220%22%20y2=%2250%22/%3E%3Cline%20x1=%2232%22%20y1=%2214%22%20x2=%2232%22%20y2=%2250%22/%3E%3Cline%20x1=%2244%22%20y1=%2214%22%20x2=%2244%22%20y2=%2250%22/%3E%3Cpath%20d=%22M12%2032%20C18%2026,%2024%2038,%2032%2032%20S46%2026,%2052%2032%22/%3E%3C/g%3E%3C/svg%3E" alt=""><div><h1 id="bookTitle">Loom</h1><small id="bookAuthor"></small></div></div>
     <div class="chapters" id="chapterList"></div>
     <div class="leftfoot">
       <button class="primary" onclick="newChapter()">＋ 新增章節</button>
