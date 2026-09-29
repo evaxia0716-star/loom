@@ -45,6 +45,7 @@ button:hover{color:var(--ink);border-color:var(--accent)}
 .nav{display:flex;justify-content:space-between;margin-top:60px;padding-top:20px;border-top:1px solid var(--line)}
 .nav a{padding:8px 0}
 .empty{text-align:center;color:var(--muted);padding:80px 0}
+.empty button{margin-top:14px}
 .tools{display:flex;gap:6px}
 @media (max-width:600px){.wrap{padding:24px 18px 100px}.cover h1{font-size:28px}}
 </style>
@@ -63,42 +64,84 @@ button:hover{color:var(--ink);border-color:var(--accent)}
 
 <script>
 var API = 'https://script.google.com/macros/s/AKfycbwWw3njCkyrj4P1I2SdnY3Vcy9p9eeoTGaQYGoW_eZ_fmFoBg--qAo2s5DRmtdGiugx9g/exec';
-var DATA = null;
+var DATA = null;     // 目錄（不含全文）
+var BODY = {};       // 已讀過的章節全文（只在這次開啟期間）
 var fs = Number(localStorage.getItem('loom_reader_fs') || 18);
 var theme = localStorage.getItem('loom_reader_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 applyTheme(); applyFs();
 
-fetch(API + '?action=public').then(function (r) { return r.json(); }).then(function (j) {
-  if (!j.ok) throw new Error(j.error);
-  DATA = j;
-  document.getElementById('bookTitle').textContent = j.book || '沙漠之鷹';
-  document.getElementById('bookAuthor').textContent = j.author || '';
-  document.title = j.book || '沙漠之鷹';
-  render();
-}).catch(function (e) { document.getElementById('view').innerHTML = '<div class="empty">讀不到內容：' + esc(e.message) + '</div>'; });
+// Apps Script 偶爾回一頁 HTML 錯誤頁而不是 JSON；自動重試兩次
+function getJson(url, tries) {
+  tries = tries === undefined ? 2 : tries;
+  return fetch(url).then(function (r) { return r.text(); }).then(function (t) {
+    try { return JSON.parse(t); } catch (_) { throw new Error('__HTML__'); }
+  }).catch(function (e) {
+    if (tries > 0 && (e.message === '__HTML__' || /Failed to fetch|NetworkError/i.test(e.message))) {
+      return new Promise(function (res) { setTimeout(res, 1500); }).then(function () { return getJson(url, tries - 1); });
+    }
+    if (e.message === '__HTML__') throw new Error('後端暫時沒回應，請稍後再試');
+    throw e;
+  });
+}
+
+function loadToc() {
+  return getJson(API + '?action=public').then(function (j) {
+    if (!j.ok) throw new Error(j.error);
+    DATA = j;
+    document.getElementById('bookTitle').textContent = j.book || '沙漠之鷹';
+    document.getElementById('bookAuthor').textContent = j.author || '';
+    document.title = j.book || '沙漠之鷹';
+    render();
+  }).catch(function (e) {
+    document.getElementById('view').innerHTML = '<div class="empty">讀不到內容：' + esc(e.message) + '<br><button onclick="location.reload()">重試</button></div>';
+  });
+}
+loadToc();
+
+function loadBody(id) {
+  if (BODY[id] !== undefined) return Promise.resolve(BODY[id]);
+  return getJson(API + '?action=read&id=' + encodeURIComponent(id)).then(function (j) {
+    if (!j.ok) throw new Error(j.error);
+    BODY[id] = j.chapter.body || '';
+    return BODY[id];
+  });
+}
 
 window.addEventListener('hashchange', render);
 function go(id) { location.hash = id ? 'ch=' + id : ''; }
+function hashId() { var m = location.hash.match(/ch=([^&]+)/); return m ? m[1] : ''; }
+
 function render() {
   if (!DATA) return;
-  var m = location.hash.match(/ch=([^&]+)/);
+  var id = hashId();
   var view = document.getElementById('view');
   window.scrollTo(0, 0);
-  if (!m) return renderToc(view);
-  var i = DATA.chapters.map(function (c) { return String(c.id); }).indexOf(m[1]);
+  if (!id) return renderToc(view);
+  var i = DATA.chapters.map(function (c) { return String(c.id); }).indexOf(id);
   if (i === -1) return renderToc(view);
   var c = DATA.chapters[i], prev = DATA.chapters[i - 1], next = DATA.chapters[i + 1];
-  var h = '<div class="chapter"><h2>' + esc(c.title) + '</h2><div class="sub">第 ' + c.order + ' 章 · ' + (c.word_count || 0) + ' 字</div><div class="body">';
-  String(c.body || '').split(/\n+/).forEach(function (line) {
-    line = line.replace(/^[\s\u3000]+|\s+$/g, '');
-    if (!line) return;
-    if (/^[\*＊\-—─]{3,}$/.test(line)) h += '<p class="br">✦ ✦ ✦</p>';
-    else h += '<p>' + esc(line) + '</p>';
+  var head = '<div class="chapter"><h2>' + esc(c.title) + '</h2><div class="sub">' + (c.word_count || 0) + ' 字</div>';
+  var nav = '<div class="nav"><span>' + (prev ? '<a href="#ch=' + prev.id + '">← ' + esc(prev.title) + '</a>' : '') + '</span><a href="#">目錄</a><span>' + (next ? '<a href="#ch=' + next.id + '">' + esc(next.title) + ' →</a>' : '') + '</span></div></div>';
+
+  if (BODY[c.id] === undefined) view.innerHTML = head + '<div class="empty">正在載入這一章…</div>' + nav;
+  loadBody(c.id).then(function (body) {
+    if (hashId() !== String(c.id)) return;   // 讀的這段時間已經換頁，不要蓋掉
+    var h = head + '<div class="body">';
+    String(body || '').split(/\n+/).forEach(function (line) {
+      line = line.replace(/^[\s\u3000]+|\s+$/g, '');
+      if (!line) return;
+      if (/^[\*＊\-—─]{3,}$/.test(line)) h += '<p class="br">✦ ✦ ✦</p>';
+      else h += '<p>' + esc(line) + '</p>';
+    });
+    view.innerHTML = h + '</div>' + nav;
+    localStorage.setItem('loom_reader_last', c.id);
+    if (next) loadBody(next.id).catch(function () {});   // 悄悄預讀下一章
+  }).catch(function (e) {
+    if (hashId() !== String(c.id)) return;
+    view.innerHTML = head + '<div class="empty">這一章讀不到：' + esc(e.message) + '<br><button onclick="render()">重試</button></div>' + nav;
   });
-  h += '</div><div class="nav"><span>' + (prev ? '<a href="#ch=' + prev.id + '">← ' + esc(prev.title) + '</a>' : '') + '</span><a href="#">目錄</a><span>' + (next ? '<a href="#ch=' + next.id + '">' + esc(next.title) + ' →</a>' : '') + '</span></div></div>';
-  view.innerHTML = h;
-  localStorage.setItem('loom_reader_last', c.id);
 }
+
 function renderToc(view) {
   var last = localStorage.getItem('loom_reader_last');
   var total = DATA.chapters.reduce(function (s, c) { return s + (Number(c.word_count) || 0); }, 0);
