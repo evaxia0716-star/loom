@@ -52,8 +52,6 @@ label{display:block;color:var(--muted);font-size:12px;margin:8px 0 3px}
 .status{font-size:12px;color:var(--muted);white-space:nowrap}
 .status.dirty{color:var(--accent)}
 .status.err{color:var(--danger)}
-.banner{background:#3a2e1c;color:var(--accent);padding:8px 16px;font-size:13px;display:none;gap:10px;align-items:center}
-.banner.show{display:flex}
 .paper{flex:1;overflow:auto;padding:40px 0 120px;position:relative}
 .loading{display:none;position:sticky;top:0;margin:-40px auto 24px;max-width:720px;padding:10px 32px;background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--accent);font-size:13px;align-items:center;gap:10px;z-index:2}
 .loading.show{display:flex}
@@ -73,14 +71,16 @@ label{display:block;color:var(--muted);font-size:12px;margin:8px 0 3px}
 .pane{flex:1;overflow:auto;padding:12px;display:none}
 .pane.on{display:block}
 .card{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
-.card h4{margin:0 0 2px;font-size:13px;font-weight:600}
+.card h4{margin:0 0 2px;font-size:13px;font-weight:600;display:flex;align-items:center;flex-wrap:wrap;gap:6px}
 .card .sub{font-size:11px;color:var(--muted)}
 .card .body{display:none;white-space:pre-wrap;font-size:12.5px;line-height:1.6;margin-top:8px;color:var(--ink)}
 .card.open .body{display:block}
 .card .acts{display:none;gap:6px;margin-top:8px}
 .card.open .acts{display:flex}
 .card.done h4{color:var(--dim);text-decoration:line-through}
-.cat{display:inline-block;font-size:10px;color:var(--accent);border:1px solid var(--accent2);border-radius:4px;padding:0 5px;margin-right:6px}
+.cat{display:inline-block;font-size:10px;color:var(--accent);border:1px solid var(--accent2);border-radius:4px;padding:0 5px;font-weight:400}
+.cat.on{color:var(--ok);border-color:var(--ok)}
+.av{width:30px;height:30px;border-radius:50%;object-fit:cover;flex:none;border:1px solid var(--line)}
 .filter{display:flex;gap:6px;margin-bottom:10px}
 .filter input,.filter select{font-size:12px;padding:5px 8px}
 .meta .row{display:flex;gap:6px}
@@ -127,11 +127,6 @@ kbd{font-size:11px;border:1px solid var(--line);border-radius:3px;padding:0 4px;
       <button onclick="save()" title="Ctrl+S">存檔</button>
       <button class="ghost" onclick="toggleFocus()" title="專注模式（F 鍵）">⛶</button>
     </div>
-    <div class="banner" id="docBanner">
-      <span>雲端 Doc 比 Loom 的快取新，妳可能直接在 Docs 改過。</span>
-      <button onclick="pullDoc()">載入 Doc 版本</button>
-      <button class="ghost" onclick="hideBanner()">忽略</button>
-    </div>
     <div class="paper" onclick="focusSheet(event)">
       <div class="loading" id="loading"><span></span>正在從雲端載入這一章…</div>
       <div class="sheet empty" id="sheet" contenteditable="true" spellcheck="false"></div>
@@ -166,16 +161,16 @@ kbd{font-size:11px;border:1px solid var(--line);border-radius:3px;padding:0 4px;
       <div class="chk"><input type="checkbox" id="mPublic" onchange="saveMeta()"><span>公開給讀者端</span></div>
       <div style="margin-top:14px;display:flex;gap:6px;flex-wrap:wrap">
         <a id="mDoc" href="#" target="_blank" rel="noopener"><button>開啟 Doc</button></a>
-        <button onclick="pullDoc()">從 Doc 同步</button>
+        <button onclick="reloadChapter()">重新載入本章</button>
         <button onclick="moveChapter(-1)">↑ 上移</button>
         <button onclick="moveChapter(1)">↓ 下移</button>
       </div>
       <div style="margin-top:20px"><button class="danger" onclick="deleteChapter()">刪除本章</button></div>
-      <p class="hint" style="margin-top:14px">章節 Doc 是稿子真身，Loom 存的是快取。平常在這裡寫；Doc 開來看、分享、翻版本都可以，別兩邊同時改。</p>
+      <p class="hint" style="margin-top:14px">稿子只存在這一章的 Doc 裡，Loom 不另存一份。在這裡寫、或到 Docs 改都可以，別兩邊同時改。存檔時如果 Doc 在妳打開之後被改過，會先問妳。在 Docs 改完，回這裡按「重新載入本章」。</p>
     </div>
 
     <div class="pane" id="pane-chars">
-      <div class="filter"><input placeholder="搜尋角色" oninput="renderChars(this.value)"><button onclick="editCard('characters')">＋</button></div>
+      <div class="filter"><input id="charQ" placeholder="搜尋角色" oninput="renderChars()"><button onclick="editCard('characters')">＋</button></div>
       <div id="charList"></div>
     </div>
 
@@ -191,6 +186,7 @@ kbd{font-size:11px;border:1px solid var(--line);border-radius:3px;padding:0 4px;
     <div class="pane" id="pane-threads">
       <div class="filter">
         <select id="threadScope" onchange="renderThreads()"><option value="open">未收</option><option value="chapter">本章</option><option value="all">全部</option></select>
+        <select id="threadType" onchange="renderThreads()"><option value="">全部類型</option><option>伏筆</option><option>待補</option><option>校對</option><option>續寫點</option></select>
         <button onclick="editCard('threads')">＋</button>
       </div>
       <div id="threadList"></div>
@@ -235,16 +231,20 @@ kbd{font-size:11px;border:1px solid var(--line);border-radius:3px;padding:0 4px;
 // ══════════ 設定 ══════════
 var API = 'https://script.google.com/macros/s/AKfycbwWw3njCkyrj4P1I2SdnY3Vcy9p9eeoTGaQYGoW_eZ_fmFoBg--qAo2s5DRmtdGiugx9g/exec';
 var STATUS_ORDER = ['構思','草稿','修改','完成'];
+var THREAD_TYPES = ['伏筆','待補','校對','續寫點'];
 
 // ══════════ 狀態 ══════════
 var pass = localStorage.getItem('loom_pass') || '';
 var DB = { chapters:[], characters:[], world:[], threads:[], log:[], book:'', author:'' };
-var cur = null;          // 目前章節（meta + body）
+var cur = null;          // 目前章節（meta + body + doc_updated）
 var dirty = false;
 var openedWords = 0;     // 開章時字數，算今日新增
 var saving = false;
 var autosaveTimer = null;
 var fontSize = Number(localStorage.getItem('loom_font') || 18);
+var CACHE = {};          // 章節全文（只在這個分頁的記憶體裡，重新整理就清空）
+
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
 // ══════════ API ══════════
 // Apps Script 偶爾會回一頁 HTML 錯誤頁（Drive 暫時抽風）而不是 JSON；這裡自動重試兩次再放棄
@@ -270,7 +270,7 @@ function apiGet(params) {
 }
 function apiPost(action, data) {
   var body = JSON.stringify({ pass:pass, action:action, data:data });
-  return withRetry_(function () { return fetch(API, { method:'POST', headers:{'Content-Type':'text/plain'}, body:body }); }, action === 'createChapter' || action === 'addLog' ? 0 : 2);
+  return withRetry_(function () { return fetch(API, { method:'POST', headers:{'Content-Type':'text/plain'}, body:body }); }, action === 'createChapter' || action === 'addLog' || action === 'saveChapter' ? 0 : 2);
 }
 function chk(j) { if (!j.ok) throw new Error(j.error || '未知錯誤'); return j; }
 
@@ -300,8 +300,9 @@ function applyAll(j) {
   document.getElementById('bookTitle').textContent = j.book || 'Loom';
   document.getElementById('bookAuthor').textContent = j.author || '';
   document.title = (j.book || 'Loom') + ' · 作者端';
-  renderChapters(); renderChars(''); renderWorld(); renderThreads(); renderLog();
-  setStatus('已同步');
+  renderChapters(); renderChars(); renderWorld(); renderThreads(); renderLog();
+  if (cur && !dirty) setStatus(cur.readonly ? cur.doc_error : '已同步');
+  else if (!cur) setStatus('已同步');
   if (!cur && DB.chapters.length) {
     var last = localStorage.getItem('loom_last');
     var pick = DB.chapters.filter(function (c) { return c.id === last; })[0] || DB.chapters[DB.chapters.length - 1];
@@ -323,52 +324,65 @@ function renderChapters() {
 }
 function pad(n) { n = Number(n) || 0; return (n < 10 ? '0' : '') + n; }
 
-// 章節全文快取：第一次載入後留在記憶體，切章不用再等 Apps Script
-var CACHE = {};
-var prefetching = false;
-
+// ══════════ 開章 ══════════
+// 稿子的真身是 Doc。每次開章都會去 Doc 讀最新內容；
+// 記憶體裡的 CACHE 只是讓切換更快，開完之後會在背景對一次 Doc。
 function showChapter_(ch) {
   cur = ch;
+  cur.readonly = !!ch.doc_error;
   var draft = localStorage.getItem('loom_draft_' + ch.id);
-  if (draft && draft !== cur.body && confirm('這台瀏覽器有一份沒送出的草稿，比雲端多 ' + Math.abs(countWords(draft) - countWords(cur.body)) + ' 字。要用草稿嗎？')) cur.body = draft;
+  if (!cur.readonly && draft && draft !== cur.body && confirm('這台瀏覽器有一份沒送出的草稿，比雲端多 ' + Math.abs(countWords(draft) - countWords(cur.body)) + ' 字。要用草稿嗎？')) cur.body = draft;
   localStorage.setItem('loom_last', ch.id);
-  fillEditor(); fillMeta(); renderChapters(); renderThreads();
-  dirty = false; setStatus('已同步');
-  document.getElementById('docBanner').classList.toggle('show', !!cur.doc_newer);
+  fillEditor(); fillMeta(); renderChapters(); renderThreads(); renderChars();
+  dirty = false;
+  if (cur.readonly) setStatus(cur.doc_error + '（為了保護稿子，這章先不能存檔）', 'err');
+  else setStatus('已同步');
 }
 
 function openChapter(id) {
   if (dirty && !confirm('目前章節有未存的修改，要放棄嗎？')) return;
   if (CACHE[id]) {
-    // 快取先上，背景再核對一次雲端有沒有更新
-    showChapter_(JSON.parse(JSON.stringify(CACHE[id])));
+    showChapter_(clone(CACHE[id]));
     apiGet({ action:'chapter', id:id, pass:pass }).then(function (j) {
       CACHE[id] = j.chapter;
-      if (cur && cur.id === id && !dirty && j.chapter.body !== cur.body) { showChapter_(j.chapter); setStatus('已更新為雲端最新'); }
-      else if (cur && cur.id === id) { cur.doc_newer = j.chapter.doc_newer; document.getElementById('docBanner').classList.toggle('show', !!cur.doc_newer); }
+      if (!cur || cur.id !== id || dirty) return;
+      if (j.chapter.body !== cur.body) { showChapter_(clone(j.chapter)); setStatus('已更新為 Doc 最新內容'); }
+      else cur.doc_updated = j.chapter.doc_updated;
     }).catch(function () {});
+    prefetchNeighbors_();
     return;
   }
   setLoading(true); setStatus('載入中…');
   apiGet({ action:'chapter', id:id, pass:pass }).then(function (j) {
     CACHE[id] = j.chapter;
-    showChapter_(JSON.parse(JSON.stringify(j.chapter)));
-  }).catch(function (e) { setStatus(e.message, 'err'); }).then(function () { setLoading(false); prefetchAll_(); });
+    showChapter_(clone(j.chapter));
+  }).catch(function (e) { setStatus(e.message, 'err'); }).then(function () { setLoading(false); prefetchNeighbors_(); });
 }
 
-/** 背景逐章預載，讓之後切換是瞬間 */
-function prefetchAll_() {
-  if (prefetching) return;
-  var todo = DB.chapters.filter(function (c) { return !CACHE[c.id]; });
-  if (!todo.length) return;
-  prefetching = true;
-  (function next(i) {
-    if (i >= todo.length) { prefetching = false; return; }
-    apiGet({ action:'chapter', id:todo[i].id, pass:pass })
-      .then(function (j) { CACHE[todo[i].id] = j.chapter; })
-      .catch(function () {})
-      .then(function () { next(i + 1); });
-  })(0);
+/** 只預載前後各一章，之後翻頁比較快 */
+function prefetchNeighbors_() {
+  if (!cur) return;
+  var ids = DB.chapters.map(function (c) { return c.id; });
+  var i = ids.indexOf(cur.id);
+  [ids[i + 1], ids[i - 1]].forEach(function (id) {
+    if (!id || CACHE[id]) return;
+    apiGet({ action:'chapter', id:id, pass:pass }).then(function (j) { CACHE[id] = j.chapter; }).catch(function () {});
+  });
+}
+
+function reloadChapter() {
+  if (!cur) return;
+  if (dirty && !confirm('目前有未存的修改，重新載入會蓋掉。繼續？')) return;
+  var id = cur.id;
+  setLoading(true); setStatus('從 Doc 讀取…');
+  localStorage.removeItem('loom_draft_' + id);
+  apiGet({ action:'chapter', id:id, pass:pass }).then(function (j) {
+    CACHE[id] = j.chapter;
+    dirty = false;
+    showChapter_(clone(j.chapter));
+    if (!cur.readonly) setStatus('已載入 Doc 最新內容');
+    return loadAll();
+  }).catch(function (e) { setStatus(e.message, 'err'); }).then(function () { setLoading(false); });
 }
 
 function setLoading(on) { document.getElementById('loading').classList.toggle('show', !!on); }
@@ -404,7 +418,8 @@ function countWords(text) {
 function updateCount() {
   var n = countWords(readEditor());
   document.getElementById('wc').textContent = n + ' 字';
-  document.getElementById('wcToday').textContent = '今日 ' + (todayDelta() + (n - openedWords) >= 0 ? '+' : '') + (todayDelta() + (n - openedWords));
+  var delta = todayDelta() + (n - openedWords);
+  document.getElementById('wcToday').textContent = '今日 ' + (delta >= 0 ? '+' : '') + delta;
   sheet.classList.toggle('empty', n === 0 && !sheet.textContent.trim());
 }
 function todayDelta() {
@@ -431,19 +446,37 @@ function markDirty() {
 
 function save(quiet) {
   if (!cur || saving) return;
+  if (cur.readonly) { setStatus('這章的 Doc 讀不到，為了保護稿子先不存檔', 'err'); return; }
   saving = true; setStatus('存檔中…');
   var body = readEditor();
   var title = document.getElementById('chTitle').value.trim() || '未命名';
-  apiPost('saveChapter', { id:cur.id, title:title, body:body }).then(function (j) {
-    cur.body = body; cur.title = title; cur.word_count = j.result.word_count;
-    if (CACHE[cur.id]) { CACHE[cur.id].body = body; CACHE[cur.id].title = title; CACHE[cur.id].word_count = cur.word_count; }
-    dirty = false; saving = false;
-    localStorage.removeItem('loom_draft_' + cur.id);
-    var c = byId(DB.chapters, cur.id); if (c) { c.title = title; c.word_count = cur.word_count; }
-    if (j.result.words_delta) { DB.log.unshift({ date:new Date().toLocaleDateString('sv-SE', { timeZone:'Asia/Taipei' }), chapter_id:cur.id, words_delta:j.result.words_delta, note:'' }); openedWords = countWords(body); renderLog(); }
-    renderChapters(); updateCount();
+  doSave_({ id:cur.id, title:title, body:body, base_updated:cur.doc_updated || '' }, body, title, !!quiet);
+}
+function doSave_(payload, body, title, quiet) {
+  var id = payload.id;
+  apiPost('saveChapter', payload).then(function (j) {
+    saving = false;
+    if (!cur || cur.id !== id) return;
+    cur.body = body; cur.title = title; cur.word_count = j.result.word_count; cur.doc_updated = j.result.doc_updated || cur.doc_updated;
+    CACHE[id] = clone(cur);
+    dirty = false;
+    localStorage.removeItem('loom_draft_' + id);
+    var c = byId(DB.chapters, id); if (c) { c.title = title; c.word_count = cur.word_count; }
+    if (j.result.words_delta) { DB.log.unshift({ date:new Date().toLocaleDateString('sv-SE', { timeZone:'Asia/Taipei' }), chapter_id:id, words_delta:j.result.words_delta, note:'' }); openedWords = countWords(body); renderLog(); }
+    renderChapters(); renderChars(); updateCount();
     setStatus('已存檔 ' + new Date().toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit' }));
-  }).catch(function (e) { saving = false; setStatus('存檔失敗：' + e.message, 'err'); });
+  }).catch(function (e) {
+    saving = false;
+    if (e.message === 'DOC_CHANGED') {
+      if (quiet) { setStatus('Doc 在別處被改過，自動存檔已暫停，請按「存檔」決定', 'err'); return; }
+      if (confirm('雲端 Doc 在妳打開這章之後被改過（可能是在 Docs 裡改的）。\n\n按「確定」：用目前畫面的內容覆蓋 Doc。\n按「取消」：先不存。可以到右欄「本章」按「開啟 Doc」看看，或按「重新載入本章」拿 Doc 的版本。')) {
+        payload.force = true; saving = true; setStatus('存檔中…');
+        doSave_(payload, body, title, false);
+      } else setStatus('沒有存檔：Doc 在妳打開之後被改過', 'err');
+      return;
+    }
+    setStatus('存檔失敗：' + e.message, 'err');
+  });
 }
 function setStatus(t, cls) { var s = document.getElementById('saveStatus'); s.textContent = t; s.className = 'status ' + (cls || ''); }
 
@@ -462,11 +495,11 @@ function saveMeta() {
   setStatus('更新中…');
   apiPost('saveChapter', d).then(function () {
     Object.assign(cur, d); Object.assign(byId(DB.chapters, cur.id) || {}, d); if (CACHE[cur.id]) Object.assign(CACHE[cur.id], d);
-    renderChapters(); setStatus('已更新');
+    renderChapters(); setStatus(dirty ? '未存檔' : '已更新', dirty ? 'dirty' : '');
   }).catch(function (e) { setStatus(e.message, 'err'); });
 }
 function newChapter() {
-  var title = prompt('新章節標題（可留空）') ; if (title === null) return;
+  var title = prompt('新章節標題（可留空）'); if (title === null) return;
   setStatus('建立中…');
   apiPost('createChapter', { title:title || '未命名', status:'構思' }).then(function (j) {
     return loadAll().then(function () { openChapter(j.result.id); });
@@ -486,17 +519,6 @@ function moveChapter(dir) {
   setStatus('排序中…');
   apiPost('reorder', { ids:ids }).then(loadAll).catch(function (e) { setStatus(e.message, 'err'); });
 }
-function pullDoc() {
-  if (!cur) return;
-  if (dirty && !confirm('目前有未存的修改，載入 Doc 會蓋掉。繼續？')) return;
-  setStatus('從 Doc 讀取…');
-  apiPost('pullFromDoc', { id:cur.id }).then(function (j) {
-    cur.body = j.result.body; cur.word_count = j.result.word_count; cur.doc_newer = false;
-    CACHE[cur.id] = JSON.parse(JSON.stringify(cur));
-    fillEditor(); dirty = false; hideBanner(); setStatus('已載入 Doc 版本'); loadAll();
-  }).catch(function (e) { setStatus(e.message, 'err'); });
-}
-function hideBanner() { document.getElementById('docBanner').classList.remove('show'); }
 
 // ══════════ 右欄 ══════════
 function showPane(name) {
@@ -504,12 +526,22 @@ function showPane(name) {
   document.querySelectorAll('.pane').forEach(function (p) { p.classList.toggle('on', p.id === 'pane-' + name); });
 }
 function byId(arr, id) { return arr.filter(function (x) { return String(x.id) === String(id); })[0]; }
+function imgSrc(v) {
+  v = String(v || '').trim();
+  if (!v) return '';
+  return (/^(https?:)?\/\//.test(v) || v.charAt(0) === '/') ? v : 'img/' + v;
+}
 function card(opts) {
   var d = document.createElement('div'); d.className = 'card' + (opts.done ? ' done' : '');
   d.innerHTML = '<h4></h4><div class="sub"></div><div class="body"></div><div class="acts"><button>編輯</button></div>';
-  d.querySelector('h4').innerHTML = (opts.cat ? '<span class="cat"></span>' : '') + '<span class="nm"></span>';
-  if (opts.cat) d.querySelector('.cat').textContent = opts.cat;
-  d.querySelector('.nm').textContent = opts.title;
+  var h = d.querySelector('h4');
+  if (opts.img) {
+    var im = document.createElement('img'); im.className = 'av'; im.alt = ''; im.src = opts.img;
+    im.onerror = function () { im.remove(); };
+    h.appendChild(im);
+  }
+  if (opts.cat) { var s = document.createElement('span'); s.className = 'cat' + (opts.catOn ? ' on' : ''); s.textContent = opts.cat; h.appendChild(s); }
+  var nm = document.createElement('span'); nm.textContent = opts.title; h.appendChild(nm);
   d.querySelector('.sub').textContent = opts.sub || '';
   d.querySelector('.body').textContent = opts.body || '';
   d.onclick = function (e) { if (e.target.tagName !== 'BUTTON') d.classList.toggle('open'); };
@@ -517,11 +549,35 @@ function card(opts) {
   if (opts.extra) d.querySelector('.acts').appendChild(opts.extra);
   return d;
 }
-function renderChars(q) {
+
+/** 角色的所有叫法：別名欄 + 名字裡的中文短名 */
+function aliasesOf(c) {
+  var list = String(c.aliases || '').split(/[,，、;；\n]+/).map(function (a) { return a.trim(); }).filter(function (a) { return a.length >= 2; });
+  var base = String(c.name || '').split(/[·（(]/)[0].trim();
+  if (base.length >= 2 && list.indexOf(base) === -1) list.push(base);
+  return list;
+}
+/** 目前這章正文裡出現了哪些角色 */
+function presentChars() {
+  var ids = {};
+  if (!cur) return ids;
+  var text = readEditor();
+  DB.characters.forEach(function (c) {
+    if (aliasesOf(c).some(function (a) { return text.indexOf(a) !== -1; })) ids[c.id] = true;
+  });
+  return ids;
+}
+function renderChars() {
   var el = document.getElementById('charList'); el.innerHTML = '';
-  q = (q || '').toLowerCase();
-  DB.characters.filter(function (c) { return !q || (c.name + c.role + c.summary + c.notes).toLowerCase().indexOf(q) !== -1; })
-    .forEach(function (c) { el.appendChild(card({ tab:'characters', rec:c, title:c.name, sub:c.role, body:(c.summary || '') + (c.notes ? '\n\n' + c.notes : '') })); });
+  var q = (document.getElementById('charQ').value || '').toLowerCase();
+  var here = presentChars();
+  var list = DB.characters.filter(function (c) { return !q || (c.name + c.role + c.summary + c.notes + c.aliases).toLowerCase().indexOf(q) !== -1; });
+  list = list.filter(function (c) { return here[c.id]; }).concat(list.filter(function (c) { return !here[c.id]; }));
+  list.forEach(function (c) {
+    var first = c.first_chapter ? byId(DB.chapters, c.first_chapter) : null;
+    var sub = (c.role || '') + (first ? ' · 初登場：' + first.title : '');
+    el.appendChild(card({ tab:'characters', rec:c, img:imgSrc(c.image), cat:here[c.id] ? '本章' : '', catOn:true, title:c.name, sub:sub, body:(c.summary || '') + (c.notes ? '\n\n' + c.notes : '') }));
+  });
 }
 function renderWorld() {
   var sel = document.getElementById('worldCat');
@@ -534,19 +590,23 @@ function renderWorld() {
 }
 function renderThreads() {
   var scope = document.getElementById('threadScope').value;
+  var type = document.getElementById('threadType').value;
   var el = document.getElementById('threadList'); el.innerHTML = '';
   DB.threads.filter(function (t) {
+    if (type && t.type !== type) return false;
     if (scope === 'open') return !isTrue(t.resolved);
     if (scope === 'chapter') return cur && String(t.chapter_id) === String(cur.id);
     return true;
   }).forEach(function (t) {
     var ch = byId(DB.chapters, t.chapter_id);
+    var due = t.due_chapter ? byId(DB.chapters, t.due_chapter) : null;
     var btn = document.createElement('button'); btn.textContent = isTrue(t.resolved) ? '標回未收' : '已收';
     btn.onclick = function () {
       apiPost('saveThread', { id:t.id, resolved:!isTrue(t.resolved), resolved_chapter: isTrue(t.resolved) ? '' : (cur ? cur.id : '') })
         .then(function () { t.resolved = !isTrue(t.resolved); renderThreads(); }).catch(function (e) { setStatus(e.message, 'err'); });
     };
-    el.appendChild(card({ tab:'threads', rec:t, done:isTrue(t.resolved), title:String(t.content).slice(0, 40), sub:(ch ? '第' + pad(ch.order) + '章 ' + ch.title : ''), body:t.content, extra:btn }));
+    var sub = (ch ? '埋在：' + ch.title : '') + (due ? '　預計回收：' + due.title : '');
+    el.appendChild(card({ tab:'threads', rec:t, done:isTrue(t.resolved), cat:t.type, title:String(t.content).slice(0, 40), sub:sub, body:t.content, extra:btn }));
   });
 }
 function isTrue(v) { return v === true || String(v).toUpperCase() === 'TRUE'; }
@@ -591,9 +651,9 @@ function addNote() {
 
 // ══════════ 卡片編輯（角色／世界／伏筆） ══════════
 var FORMS = {
-  characters: [['name','姓名'],['role','角色定位'],['summary','設定（驅動力、目標、掙扎）','ta'],['notes','備註（血型、外貌、關係…）','ta'],['first_chapter','初登場章']],
+  characters: [['name','姓名'],['role','角色定位'],['summary','設定（驅動力、目標、掙扎）','ta'],['notes','備註（血型、外貌、關係…）','ta'],['first_chapter','初登場章','ch'],['aliases','別名（用逗號分開。正文裡出現這些名字，就算這章有他）'],['image','圖檔名（放在 img 資料夾，例如 janus.webp）']],
   world:      [['category','類別'],['name','名稱'],['content','內容','ta']],
-  threads:    [['content','內容','ta'],['chapter_id','所屬章節','ch']]
+  threads:    [['content','內容','ta'],['type','類型','type'],['chapter_id','埋在哪一章','ch'],['due_chapter','預計回收在哪一章','ch']]
 };
 var ACTIONS = { characters:['saveCharacter','deleteCharacter'], world:['saveWorld','deleteWorld'], threads:['saveThread','deleteThread'] };
 var editing = null;
@@ -605,9 +665,20 @@ function editCard(tab, rec) {
     var l = document.createElement('label'); l.textContent = fd[1]; f.appendChild(l);
     var inp;
     if (fd[2] === 'ta') { inp = document.createElement('textarea'); inp.rows = 5; }
-    else if (fd[2] === 'ch') { inp = document.createElement('select'); inp.innerHTML = '<option value="">（不指定）</option>' + DB.chapters.map(function (c) { return '<option value="' + c.id + '">第' + pad(c.order) + '章 ' + c.title + '</option>'; }).join(''); }
+    else if (fd[2] === 'ch') {
+      inp = document.createElement('select');
+      inp.innerHTML = '<option value="">（不指定）</option>' + DB.chapters.map(function (c) { return '<option value="' + c.id + '">' + pad(c.order) + ' ' + String(c.title).replace(/</g, '&lt;') + '</option>'; }).join('');
+    }
+    else if (fd[2] === 'type') {
+      inp = document.createElement('select');
+      inp.innerHTML = '<option value="">（未分類）</option>' + THREAD_TYPES.map(function (t) { return '<option>' + t + '</option>'; }).join('');
+    }
     else inp = document.createElement('input');
-    inp.id = 'f_' + fd[0]; inp.value = editing.rec[fd[0]] !== undefined ? editing.rec[fd[0]] : (fd[0] === 'chapter_id' && cur ? cur.id : '');
+    var def = '';
+    if (fd[0] === 'chapter_id' && cur) def = cur.id;
+    if (fd[0] === 'type') def = '伏筆';
+    inp.id = 'f_' + fd[0];
+    inp.value = editing.rec[fd[0]] !== undefined ? editing.rec[fd[0]] : def;
     f.appendChild(inp);
   });
   document.getElementById('cardDel').style.visibility = rec ? 'visible' : 'hidden';
