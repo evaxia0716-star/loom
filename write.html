@@ -94,6 +94,10 @@ label{display:block;color:var(--muted);font-size:12px;margin:8px 0 3px}
 .log{font-size:12px;padding:6px 0;border-bottom:1px solid var(--line)}
 .log b{color:var(--ok)} .log b.neg{color:var(--danger)}
 .log .d{color:var(--dim);margin-right:6px}
+.log{position:relative;padding-right:22px}
+.log .x{position:absolute;right:0;top:4px;border:none;background:transparent;color:var(--dim);padding:2px 4px;font-size:13px;line-height:1}
+.log .x:hover{color:var(--danger)}
+#logMsg{font-size:12px;color:var(--accent);margin-left:8px;align-self:center}
 /* 遮罩 */
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:10}
 .modal.show{display:flex}
@@ -196,7 +200,7 @@ kbd{font-size:11px;border:1px solid var(--line);border-radius:3px;padding:0 4px;
       <div class="hint">寫作日曆（近 13 週）</div>
       <div class="cal" id="cal"></div>
       <textarea id="logNote" placeholder="寫完留一句：寫到哪、卡在哪、下次從哪接。"></textarea>
-      <div style="display:flex;justify-content:flex-end;margin-top:6px"><button onclick="addNote()">記一筆</button></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:6px"><span id="logMsg"></span><button id="logBtn" onclick="addNote()">記一筆</button></div>
       <div id="logList" style="margin-top:10px"></div>
     </div>
   </aside>
@@ -639,14 +643,37 @@ function renderLog() {
     d.querySelector('b').textContent = n ? (n > 0 ? '+' : '') + n : '';
     d.querySelector('.c').textContent = ch ? ch.title : '';
     d.querySelector('.note').textContent = l.note || '';
+    if (l.id) {
+      var x = document.createElement('button'); x.className = 'x'; x.textContent = '×'; x.title = '刪除這筆';
+      x.onclick = function () { deleteNote(l); };
+      d.appendChild(x);
+    }
     el.appendChild(d);
   });
 }
+var addingNote = false;
+function logMsg(t) { document.getElementById('logMsg').textContent = t || ''; }
 function addNote() {
+  if (addingNote) return;                               // 已經在送了，第二次按不理
   var note = document.getElementById('logNote').value.trim(); if (!note) return;
+  var btn = document.getElementById('logBtn');
+  addingNote = true; btn.disabled = true; btn.textContent = '儲存中…'; logMsg('');
   apiPost('addLog', { chapter_id:cur ? cur.id : '', words_delta:0, note:note }).then(function () {
-    document.getElementById('logNote').value = ''; return loadAll();
-  }).catch(function (e) { setStatus(e.message, 'err'); });
+    document.getElementById('logNote').value = '';
+    logMsg('已記下');
+    setTimeout(function () { logMsg(''); }, 2500);
+    return loadAll();
+  }).catch(function (e) { logMsg('沒存成：' + e.message); })
+  .then(function () { addingNote = false; btn.disabled = false; btn.textContent = '記一筆'; });
+}
+function deleteNote(l) {
+  var text = (l.note || '').slice(0, 30);
+  if (!confirm('刪除這筆日誌？\n' + String(l.date).slice(0, 10) + (text ? '　' + text : ''))) return;
+  logMsg('刪除中…');
+  apiPost('deleteLog', { id:l.id }).then(function () {
+    DB.log = DB.log.filter(function (x) { return String(x.id) !== String(l.id); });
+    renderLog(); logMsg('');
+  }).catch(function (e) { logMsg('刪不掉：' + e.message); });
 }
 
 // ══════════ 卡片編輯（角色／世界／伏筆） ══════════
